@@ -47,6 +47,9 @@ def compute_lincorr(sig, lag=0, lag_step=0):
     if type(sig) != np.ndarray:
         raise TypeError(f"Signals have to be in numpy arrays!")
 
+    if sig.ndim != 2:
+        raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
+
     if lag == 0:
         lag_step = 1
     nstep_lag = int(lag * 2 / lag_step)

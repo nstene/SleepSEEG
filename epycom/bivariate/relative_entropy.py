@@ -38,6 +38,9 @@ def compute_relative_entropy(sig):
     if type(sig) != np.ndarray:
         raise TypeError(f"Signals have to be in numpy arrays!")
 
+    if sig.ndim != 2:
+        raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
+
     # OPTIMIZE - check if we can do this in one array
     h1 = np.histogram(sig[0], 10)
     h2 = np.histogram(sig[1], 10)

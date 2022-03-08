@@ -39,6 +39,9 @@ def compute_spect_multp(sig):
     if type(sig) != np.ndarray:
         raise TypeError(f"Signals have to be in numpy arrays!")
 
+    if sig.ndim != 2:
+        raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
+
     # OPTIMIZE: check if we can do this in 1 array instead of 2
     fft_1 = np.fft.rfft(sig[0])
     fft_2 = np.fft.rfft(sig[1])
