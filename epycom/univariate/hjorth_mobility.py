@@ -12,7 +12,7 @@ import numpy as np
 from ..utils.method import Method
 
 
-def compute_hjorth_mobility(signal, fs=5000):
+def compute_hjorth_mobility(signal, fs):
     """
     Function to compute Hjorth mobility of time series
 

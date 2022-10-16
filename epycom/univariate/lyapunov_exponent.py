@@ -79,7 +79,7 @@ def _compute_acorr_exp(data, fs):
     return point
 
 
-def compute_lyapunov_exponent(data, fs=5000, dimension=5, sample_lag=None,
+def compute_lyapunov_exponent(data, fs, dimension=5, sample_lag=None,
                               trajectory_len=20, min_tsep=500):
     """
     Lyapnov largest exponent estimation according to Rosenstein algorythm

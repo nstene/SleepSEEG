@@ -14,7 +14,7 @@ from scipy.signal import butter, filtfilt, find_peaks
 from ...utils.method import Method
 
 
-def detect_spikes_barkmeier(sig, fs=5000, scale=70, std_coeff=4,
+def detect_spikes_barkmeier(sig, fs, scale=70, std_coeff=4,
                             through_search=0.05,
                             det_thresholds={'LS': 700,
                                             'RS': 700,
