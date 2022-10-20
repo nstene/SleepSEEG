@@ -3,12 +3,12 @@
 # Research Center, Biomedical Engineering. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
-import cv2  # TODO! remove cv2 implementation
+
 import numpy as np
 from multiprocessing import Pool
 from scipy.signal import lfilter, remez
 from numba import njit
-
+import pandas as pd
 
 # Local imports
 from ...utils.method import Method
@@ -80,10 +80,21 @@ def _band_filter(arg):
     # find beginning and end of detections
     candidate_detections[0:_offset, :] = False
     candidate_detections[-1 - _offset:, :] = False
-
-    # TODO přepsat funkci pro NumPy
+    
     # keep only detections of enough length
-    candidate_detections = cv2.morphologyEx(np.float32(candidate_detections), cv2.MORPH_OPEN, np.ones((_minimum_length, 1)))
+    a = candidate_detections.copy().T[0]
+    cc = np.maximum.accumulate((a==1).cumsum()) -  np.maximum.accumulate(((a==1).cumsum() * (a==0))).astype(float)
+    idx = np.where(np.diff(cc)>0)[0]
+    cc[idx] = np.nan
+    
+    df = pd.DataFrame(cc)
+    df = df.fillna(method='bfill')
+    out = np.array(df)
+    out[np.where(np.diff(out.T[0])>0)[0]+1]=0
+
+    out[np.where(out.T[0]<_minimum_length)]=0
+    out[np.where(out.T[0]>1)]=1
+    candidate_detections = out.astype('float32')
 
     # get event characteristics
     indexes = np.argwhere(np.logical_xor(candidate_detections[:-1, :], candidate_detections[1:, :]) == True)
