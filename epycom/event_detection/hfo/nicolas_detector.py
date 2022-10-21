@@ -15,25 +15,24 @@ from ...utils.method import Method
 
 
 @njit()
-def calculate_background(_window_length, n_samples,
-                         iterative_background_estimator, moving_background,
-                         four_cycles_half_duration, RMS_signal, _threshold):
+def calculate_background(_win_len, n_samples,
+                         iter_back_est, movin_back,
+                         half_duration, RMS_signal, _threshold):
     """
     Numba implementation of iterative background estimator
 
 
     """
 
-    for jj in range(_window_length, n_samples):
+    for jj in range(_win_len, n_samples):
 
-        iterative_background_estimator[jj, :] = min(RMS_signal[jj - four_cycles_half_duration, :][0],
-                                                    _threshold * moving_background[jj - four_cycles_half_duration, :][0])
+        iter_back_est[jj, :] = min(RMS_signal[jj - half_duration, :][0],
+                                   _threshold * movin_back[jj - half_duration, :][0])
 
-        moving_background[jj, :] = (moving_background[jj - 1, :] +
-                                    (iterative_background_estimator[jj, :] -
-                                    iterative_background_estimator[jj - _window_length, :]) / _window_length)
+        movin_back[jj, :] = (movin_back[jj - 1, :] + (iter_back_est[jj, :] -
+                                                      iter_back_est[jj - _win_len, :]) / _win_len)
 
-    return moving_background, iterative_background_estimator
+    return movin_back, iter_back_est
 
 
 def _band_filter(arg):
@@ -44,7 +43,7 @@ def _band_filter(arg):
     _freq_band = arg[1]
     _bandpass_signal = arg[2]
     _narrowband_filt_order = arg[3]
-    _window_length = arg[4]
+    _win_len = arg[4]
     _threshold = arg[5]
     _num_samples = arg[6]
     _offset = arg[7]
@@ -58,24 +57,24 @@ def _band_filter(arg):
     narrowband_signal = np.delete(narrowband_signal, np.arange(0, _narrowband_filt_order // 2, dtype=int), axis=0)
 
     # compute RMS (squared) value in 4 cycles window
-    four_cycles_half_duration = np.floor(2 / _freq_band).astype('int32')
-    four_cycles_duration = np.ones([1, 2 * four_cycles_half_duration + 1]) / (2 * four_cycles_half_duration + 1)
+    half_duration = np.floor(2 / _freq_band).astype('int32')
+    four_cycles_duration = np.ones([1, 2 * half_duration + 1]) / (2 * half_duration + 1)
     four_cycles_duration = four_cycles_duration.flatten()
 
     RMS_signal = np.sqrt(np.concatenate([lfilter(four_cycles_duration, 1,
-                                                 narrowband_signal ** 2, axis=0), np.zeros([four_cycles_half_duration, 1])]))
-    RMS_signal = np.delete(RMS_signal, np.arange(0, four_cycles_half_duration, dtype=int), axis=0)
+                                                 narrowband_signal ** 2, axis=0), np.zeros([half_duration, 1])]))
+    RMS_signal = np.delete(RMS_signal, np.arange(0, half_duration, dtype=int), axis=0)
 
     # compute RMS of background (moving window)
-    moving_background = RMS_signal.copy()
-    moving_background[:_window_length, :] = np.tile(np.mean(RMS_signal[:_window_length, :], axis=0), (_window_length, 1))
+    movin_back = RMS_signal.copy()
+    movin_back[:_win_len, :] = np.tile(np.mean(RMS_signal[:_win_len, :], axis=0), (_win_len, 1))
 
-    iterative_background_estimator = RMS_signal.copy()
+    iter_back_est = RMS_signal.copy()
 
-    moving_background, iterative_background_estimator = calculate_background(_window_length, _num_samples, iterative_background_estimator, moving_background,
-                       four_cycles_half_duration, RMS_signal, _threshold)
+    movin_back, iter_back_est = calculate_background(_win_len, _num_samples, iter_back_est, movin_back,
+                                                     half_duration, RMS_signal, _threshold)
     # first detection
-    candidate_detections = RMS_signal > _threshold * moving_background
+    candidate_detections = RMS_signal > _threshold * movin_back
 
     # find beginning and end of detections
     candidate_detections[0:_offset, :] = False
@@ -99,7 +98,7 @@ def _band_filter(arg):
 
     # get event characteristics
     indexes = np.argwhere(np.logical_xor(candidate_detections[:-1, :],
-                                         candidate_detections[1:, :]) == True)
+                                         candidate_detections[1:, :]))
     arr_sorted = indexes[indexes[:, 1].argsort(kind='mergesort')]
 
     index_sample, index_channels = arr_sorted[:, 0], arr_sorted[:, 1]
@@ -111,7 +110,8 @@ def _band_filter(arg):
     values = np.ones([number_of_events, 7])
 
     for jj in range(0, number_of_events):
-        values[jj, :] = [max(RMS_signal[event_start[jj]:event_end[jj], detection_channel[jj]] / moving_background[event_start[jj]:event_end[jj], detection_channel[jj]]),
+        values[jj, :] = [max(RMS_signal[event_start[jj]:event_end[jj], detection_channel[jj]] /
+                             movin_back[event_start[jj]:event_end[jj], detection_channel[jj]]),
                          max(RMS_signal[event_start[jj]:event_end[jj], detection_channel[jj]]),
                          max(abs(narrowband_signal[event_start[jj]:event_end[jj], detection_channel[jj]])),
                          max(abs(_bandpass_signal[event_start[jj]:event_end[jj], detection_channel[jj]])),
@@ -128,7 +128,7 @@ def _band_filter(arg):
     return detected_events
 
 
-def detect_hfo_nicolas(sig, fs, mp=1):
+def detect_hfo_nicolas(sig, fs, mp=1, threshold=3):
     """
     "Signal-to-noise ratio" like metric that compares narrow band and broad
     band signals to eliminate increased power generated by sharp transients.
@@ -143,7 +143,8 @@ def detect_hfo_nicolas(sig, fs, mp=1):
       Number of processors to use (recommended to use 1 processor and
                                    implement multiprocessing in run_windowed
                                    fuction)
-
+   threshold: float
+       RMS of background times this value
 
         Returns
     -------
@@ -157,11 +158,8 @@ def detect_hfo_nicolas(sig, fs, mp=1):
     # ALGORITHM PARAMETERS
     # background moving window length [seconds]
     window_length = 5
-    # threshold (RMS of background times this value)
-    threshold = 3
 
     # INITIALIZATIONS
-    duration = len(sig) / fs / 60
     num_samples = len(sig)
     window_length = np.round(window_length * fs).astype('int32')
 
@@ -204,7 +202,6 @@ def detect_hfo_nicolas(sig, fs, mp=1):
                                       np.sum(narrowband_filters ** 2, 1)) + 4 / freq_band)
     minimum_length = minimum_length.astype('int32').tolist()
 
-    event = np.zeros((round(20 * duration), 11))
     offset = int((narrowband_filt_order + bandpass_filt_order) / 2 - 1)
 
     ar = np.concatenate([sig, np.zeros([bandpass_filt_order // 2, 1])])
@@ -215,6 +212,7 @@ def detect_hfo_nicolas(sig, fs, mp=1):
           narrowband_filt_order, window_length, threshold, num_samples,
           offset, minimum_length[ii], fs, sig] for ii in range(0, num_bands)]
 
+    # multiprocessing of signal filtering and primary detections
     if mp > 1:
         pool = Pool()
         results = pool.map(_band_filter, x)
@@ -251,13 +249,11 @@ def detect_hfo_nicolas(sig, fs, mp=1):
         index_of_events = np.logical_and(
             (all_events[:, 2] + all_events[:, 3] + minimum_separation_ripple > events_in_channel[0, 2]),
             (all_events[:, 2] < events_in_channel[0, 2] + events_in_channel[0, 3] + minimum_separation_ripple))
-        # index_of_events = np.where(index_of_events[:N] == True)[0].tolist()
-        # index_of_events = index_of_events.tolist()
 
         overlapping_events = all_events[index_of_events, :]
         events_in_channel = np.delete(events_in_channel, index_of_events[0:N], axis=0)
 
-        idx_delete = np.where(index_of_events[N:] == True)[0].tolist()
+        idx_delete = np.where(index_of_events[N:])[0].tolist()
 
         channel_event = channel_event if len(index_of_events[N + 1:]) == 0 else np.delete(channel_event, idx_delete,
                                                                                           axis=0)
@@ -291,13 +287,11 @@ def detect_hfo_nicolas(sig, fs, mp=1):
         index_of_events = np.logical_and(
             (all_events[:, 2] + all_events[:, 3] + minimum_separation > events_in_channel[0, 2]),
             (all_events[:, 2] < events_in_channel[0, 2] + events_in_channel[0, 3] + minimum_separation))
-        # index_of_events = np.where(index_of_events[:N] == True)[0].tolist()
-        # index_of_events = index_of_events.tolist()
 
         overlapping_events = all_events[index_of_events, :]
         events_in_channel = np.delete(events_in_channel, index_of_events[0:N], axis=0)
 
-        idx_delete = np.where(index_of_events[N:] == True)[0].tolist()
+        idx_delete = np.where(index_of_events[N:])[0].tolist()
 
         channel_event = channel_event if len(index_of_events[N + 1:]) == 0 else np.delete(channel_event, idx_delete, axis=0)
         counter = counter - np.count_nonzero(index_of_events[N:])
@@ -359,7 +353,13 @@ class NicolasDetector(Method):
 
         References
         ----------
-        #TODO! Add reference to Nicolas article
+        von Ellenrieder, N., Andrade-Valença, L.P., Dubeau, F., Gotman, J., 2012. Automatic detec-
+        tion of fast oscillations (40–200 Hz) in scalp EEG recordings. Clin. Neurophysiol. 123,
+        670–680.
+
+        von Ellenrieder, N., Frauscher, B., Dubeau, F., Gotman, J., 2016. Interaction with slow
+        waves during sleep improves discrimination of physiological and pathological high
+        frequency oscillations (80–500 Hz). Epilepsia 57, 869–878.
         """
 
         super().__init__(detect_hfo_nicolas, **kwargs)
