@@ -163,7 +163,7 @@ def detect_hfo_nicolas(sig, fs, mp=1, threshold=3):
     num_samples = len(sig)
     window_length = np.round(window_length * fs).astype('int32')
 
-    if num_samples < window_length + 1 or window_length == num_samples - 3:
+    if num_samples < window_length  or window_length == num_samples - 3:
         raise ValueError
 
     minimum_separation = 0.008  # minimum separation between events [seconds]
@@ -226,99 +226,102 @@ def detect_hfo_nicolas(sig, fs, mp=1, threshold=3):
     events = np.array([array for arrays in results for array in arrays])
     ev = events.copy()
 
-    event_counter, _ = events.shape
+    event_counter = events.shape[0]
 
-    # separate in ripples and fast ripples, join overlapping events
-    ev = np.concatenate([ev[:, [0, 1, 2, 3, 4, 8, 9, 10]], np.ones([ev.shape[0], 1])], axis=1)
-    ripples = np.zeros([event_counter, 9])
-    fast_ripples = ripples.copy()
-
-    ripple_counter = 0
-    fast_ripple_counter = 0
-
-    # ripples
-    events_in_channel = ev[(np.where(ev[:, 1] < 250))[0].tolist(), :]
-    channel_event = np.zeros([events_in_channel.shape[0], 9])
-    counter = 0
-
-    while events_in_channel.shape[0] > 0:
-        N = events_in_channel.shape[0]
-        all_events = events_in_channel if counter == 0 else np.concatenate([events_in_channel, channel_event[:counter + 1, :]], axis=0)
-        counter += 1
-
-        index_of_events = np.logical_and(
-            (all_events[:, 2] + all_events[:, 3] + minimum_separation_ripple > events_in_channel[0, 2]),
-            (all_events[:, 2] < events_in_channel[0, 2] + events_in_channel[0, 3] + minimum_separation_ripple))
-
-        overlapping_events = all_events[index_of_events, :]
-        events_in_channel = np.delete(events_in_channel, index_of_events[0:N], axis=0)
-
-        idx_delete = np.where(index_of_events[N:])[0].tolist()
-
-        channel_event = channel_event if len(index_of_events[N + 1:]) == 0 else np.delete(channel_event, idx_delete,
-                                                                                          axis=0)
-        counter = counter - np.count_nonzero(index_of_events[N:])
-
-        channel_event[counter - 1, :] = [round(overlapping_events[0, 0]),
-                                         float(np.mean(overlapping_events[:, 1])),
-                                         round(min(overlapping_events[:, 2])),
-                                         round(max(overlapping_events[:, 2] + overlapping_events[:, 3]) - min(overlapping_events[:, 2])),
-                                         float(max(overlapping_events[:, 4])),
-                                         float(max(overlapping_events[:, 5])),
-                                         float(min(overlapping_events[:, 6])),
-                                         round(max(max(overlapping_events[:, 7]), 1)),
-                                         round(sum(overlapping_events[:, 8]))
-                                         ]
-
-    channel_event = channel_event[:counter, :]
-    ripples[(ripple_counter + np.arange(0 + channel_event.shape[0])).tolist(), :] = channel_event
-    ripple_counter += channel_event.shape[0]
-
-    # fast ripples
-    events_in_channel = ev[(np.where(ev[:, 1] > 250))[0].tolist(), :]
-    channel_event = np.zeros([events_in_channel.shape[0], 9])
-    counter = 0
-
-    while events_in_channel.shape[0] > 0:
-        N = events_in_channel.shape[0]
-        all_events = events_in_channel if counter == 0 else np.concatenate([events_in_channel, channel_event[:counter + 1, :]], axis=0)
-        counter += 1
-
-        index_of_events = np.logical_and(
-            (all_events[:, 2] + all_events[:, 3] + minimum_separation > events_in_channel[0, 2]),
-            (all_events[:, 2] < events_in_channel[0, 2] + events_in_channel[0, 3] + minimum_separation))
-
-        overlapping_events = all_events[index_of_events, :]
-        events_in_channel = np.delete(events_in_channel, index_of_events[0:N], axis=0)
-
-        idx_delete = np.where(index_of_events[N:])[0].tolist()
-
-        channel_event = channel_event if len(index_of_events[N + 1:]) == 0 else np.delete(channel_event, idx_delete, axis=0)
-        counter = counter - np.count_nonzero(index_of_events[N:])
-
-        channel_event[counter - 1, :] = [round(overlapping_events[0, 0]),
-                                         float(np.mean(overlapping_events[:, 1])),
-                                         round(min(overlapping_events[:, 2])),
-                                         round(max(overlapping_events[:, 2] + overlapping_events[:, 3]) - min(overlapping_events[:, 2])),
-                                         float(max(overlapping_events[:, 4])),
-                                         float(max(overlapping_events[:, 5])),
-                                         float(min(overlapping_events[:, 6])),
-                                         round(max(max(overlapping_events[:, 7]), 1)),
-                                         round(sum(overlapping_events[:, 8]))
-                                         ]
-
-    channel_event = channel_event[:counter, :]
-    fast_ripples[(fast_ripple_counter + np.arange(0 + channel_event.shape[0])).tolist(), :] = channel_event
-    fast_ripple_counter += channel_event.shape[0]
-
-    ripples = ripples[0:ripple_counter, :]
-    fast_ripples = fast_ripples[0:fast_ripple_counter, :]
-
-    oscillations = np.concatenate([ripples, fast_ripples], axis=0)
-    output = [tuple([int(oscillations[i, 2]),
-                     int(oscillations[i, 2] +
-                         oscillations[i, 3]), oscillations[i, 1]])
-              for i in np.arange(np.shape(oscillations)[0])]
+    if event_counter>0:
+        # separate in ripples and fast ripples, join overlapping events
+        ev = np.concatenate([ev[:, [0, 1, 2, 3, 4, 8, 9, 10]], np.ones([ev.shape[0], 1])], axis=1)
+        ripples = np.zeros([event_counter, 9])
+        fast_ripples = ripples.copy()
+    
+        ripple_counter = 0
+        fast_ripple_counter = 0
+    
+        # ripples
+        events_in_channel = ev[(np.where(ev[:, 1] < 250))[0].tolist(), :]
+        channel_event = np.zeros([events_in_channel.shape[0], 9])
+        counter = 0
+    
+        while events_in_channel.shape[0] > 0:
+            N = events_in_channel.shape[0]
+            all_events = events_in_channel if counter == 0 else np.concatenate([events_in_channel, channel_event[:counter + 1, :]], axis=0)
+            counter += 1
+    
+            index_of_events = np.logical_and(
+                (all_events[:, 2] + all_events[:, 3] + minimum_separation_ripple > events_in_channel[0, 2]),
+                (all_events[:, 2] < events_in_channel[0, 2] + events_in_channel[0, 3] + minimum_separation_ripple))
+    
+            overlapping_events = all_events[index_of_events, :]
+            events_in_channel = np.delete(events_in_channel, index_of_events[0:N], axis=0)
+    
+            idx_delete = np.where(index_of_events[N:])[0].tolist()
+    
+            channel_event = channel_event if len(index_of_events[N + 1:]) == 0 else np.delete(channel_event, idx_delete,
+                                                                                              axis=0)
+            counter = counter - np.count_nonzero(index_of_events[N:])
+    
+            channel_event[counter - 1, :] = [round(overlapping_events[0, 0]),
+                                             float(np.mean(overlapping_events[:, 1])),
+                                             round(min(overlapping_events[:, 2])),
+                                             round(max(overlapping_events[:, 2] + overlapping_events[:, 3]) - min(overlapping_events[:, 2])),
+                                             float(max(overlapping_events[:, 4])),
+                                             float(max(overlapping_events[:, 5])),
+                                             float(min(overlapping_events[:, 6])),
+                                             round(max(max(overlapping_events[:, 7]), 1)),
+                                             round(sum(overlapping_events[:, 8]))
+                                             ]
+    
+        channel_event = channel_event[:counter, :]
+        ripples[(ripple_counter + np.arange(0 + channel_event.shape[0])).tolist(), :] = channel_event
+        ripple_counter += channel_event.shape[0]
+    
+        # fast ripples
+        events_in_channel = ev[(np.where(ev[:, 1] > 250))[0].tolist(), :]
+        channel_event = np.zeros([events_in_channel.shape[0], 9])
+        counter = 0
+    
+        while events_in_channel.shape[0] > 0:
+            N = events_in_channel.shape[0]
+            all_events = events_in_channel if counter == 0 else np.concatenate([events_in_channel, channel_event[:counter + 1, :]], axis=0)
+            counter += 1
+    
+            index_of_events = np.logical_and(
+                (all_events[:, 2] + all_events[:, 3] + minimum_separation > events_in_channel[0, 2]),
+                (all_events[:, 2] < events_in_channel[0, 2] + events_in_channel[0, 3] + minimum_separation))
+    
+            overlapping_events = all_events[index_of_events, :]
+            events_in_channel = np.delete(events_in_channel, index_of_events[0:N], axis=0)
+    
+            idx_delete = np.where(index_of_events[N:])[0].tolist()
+    
+            channel_event = channel_event if len(index_of_events[N + 1:]) == 0 else np.delete(channel_event, idx_delete, axis=0)
+            counter = counter - np.count_nonzero(index_of_events[N:])
+    
+            channel_event[counter - 1, :] = [round(overlapping_events[0, 0]),
+                                             float(np.mean(overlapping_events[:, 1])),
+                                             round(min(overlapping_events[:, 2])),
+                                             round(max(overlapping_events[:, 2] + overlapping_events[:, 3]) - min(overlapping_events[:, 2])),
+                                             float(max(overlapping_events[:, 4])),
+                                             float(max(overlapping_events[:, 5])),
+                                             float(min(overlapping_events[:, 6])),
+                                             round(max(max(overlapping_events[:, 7]), 1)),
+                                             round(sum(overlapping_events[:, 8]))
+                                             ]
+    
+        channel_event = channel_event[:counter, :]
+        fast_ripples[(fast_ripple_counter + np.arange(0 + channel_event.shape[0])).tolist(), :] = channel_event
+        fast_ripple_counter += channel_event.shape[0]
+    
+        ripples = ripples[0:ripple_counter, :]
+        fast_ripples = fast_ripples[0:fast_ripple_counter, :]
+    
+        oscillations = np.concatenate([ripples, fast_ripples], axis=0)
+        output = [tuple([int(oscillations[i, 2]),
+                         int(oscillations[i, 2] +
+                             oscillations[i, 3]), oscillations[i, 1]])
+                  for i in np.arange(np.shape(oscillations)[0])]
+    else:
+        output = []    
 
     return output
 

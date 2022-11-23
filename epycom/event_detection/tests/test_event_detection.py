@@ -15,7 +15,8 @@ from epycom.event_detection import BarkmeierDetector
 from epycom.event_detection import (LineLengthDetector,
                                     RootMeanSquareDetector,
                                     HilbertDetector,
-                                    CSDetector)
+                                    CSDetector,
+                                    NicolasDetector)
 
 
 # ----- Spikes -----
@@ -124,7 +125,33 @@ def test_detect_hfo_cs_beta(create_testing_eeg_data, benchmark):
     # Only the second HFO is caught by CS (due to signal artificiality)
     expected_vals = [(34992, 35090),  # Band detection
                      (34992, 35090)]  # Conglomerate detection
+                     
+     
 
     for exp_val, det in zip(expected_vals, dets):
         assert det[0] == exp_val[0]
         assert det[1] == exp_val[1]
+        
+        
+def test_detect_hfo_nicolas(create_testing_eeg_data, benchmark):
+     fs = 5000
+     b, a = butter(3, [80 / (fs / 2), 600 / (fs / 2)], 'bandpass')
+     filt_data = filtfilt(b, a, create_testing_eeg_data)
+     window_size = int((1 / 80) * fs)
+
+     compute_instance = NicolasDetector()
+     compute_instance.params = {'window_size': window_size}
+     dets = benchmark(compute_instance.run_windowed,
+                      filt_data, 50000)
+
+     compute_instance.run_windowed(filt_data,
+                                   5000,
+                                   n_cores=2)
+
+     expected_vals = [(4942, 5237),
+                      (4961, 5214)]
+
+     for exp_val, det in zip(expected_vals, dets):
+         assert det[0] == exp_val[0]
+         assert det[1] == exp_val[1]
+
