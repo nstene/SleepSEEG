@@ -13,7 +13,7 @@ import scipy.signal as sp
 from ..utils.method import Method
 
 
-def compute_mvl_count(data, fs, lowband=[8, 12], highband=[250, 600]):
+def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
     """
     Function to compute mean vector lenght (MVL) of given data
 

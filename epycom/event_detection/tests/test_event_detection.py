@@ -20,8 +20,9 @@ from epycom.event_detection import (LineLengthDetector,
 
 
 # ----- Spikes -----
-def test_detect_spikes(create_testing_eeg_data, benchmark):
+def test_detect_spikes_barkmeier(create_testing_eeg_data, benchmark):
     compute_instance = BarkmeierDetector()
+    compute_instance.params = {'fs': 5000}
     dets = benchmark(compute_instance.run_windowed,
                      create_testing_eeg_data, 50000)
     compute_instance.run_windowed(create_testing_eeg_data,
@@ -138,7 +139,8 @@ def test_detect_hfo_nicolas(create_testing_eeg_data, benchmark):
      window_size = int((1 / 80) * fs)
 
      compute_instance = NicolasDetector()
-     compute_instance.params = {'window_size': window_size}
+     compute_instance.params = {'fs': fs,
+                                'window_size': window_size}
      dets = benchmark(compute_instance.run_windowed,
                       filt_data, 50000)
 

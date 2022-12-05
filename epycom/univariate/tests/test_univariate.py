@@ -167,6 +167,7 @@ def test_sample_entropy(create_testing_data, benchmark):
 
 def test_low_f_marker(create_testing_data, benchmark):
     compute_instance = LowFreqMarker()
+    compute_instance.params = {'fs': 5000}
     res = benchmark(compute_instance.run_windowed,
                     create_testing_data,
                     50000)
