@@ -27,8 +27,10 @@ def compute_relative_entropy(sig):
 
     Returns
     -------
-    ren: float
-        max value of relative entropy between sig[0] and sig[1]
+    ren12: float
+        value of relative entropy between sig[0] and sig[1]
+    ren21: float
+        value of relative entropy between sig[1] and sig[0]
 
     Example:
     -------
@@ -54,15 +56,16 @@ def compute_relative_entropy(sig):
     if ren == float('Inf'):
         ren = np.nan
 
-    return ren
+    return ren, ren21
 
 
 class RelativeEntropy(Method):
 
     algorithm = 'RELATIVE_ENTROPY'
     algorithm_type = 'bivariate'
-    version = '1.0.0'
-    dtype = [('ren', 'float32')]
+    version = '2.0.0'
+    dtype = [('ren12', 'float32'),
+             ('ren21', 'float32')]
 
     def __init__(self, **kwargs):
         """

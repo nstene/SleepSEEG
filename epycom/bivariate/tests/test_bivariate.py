@@ -50,6 +50,7 @@ def test_relative_entropy(create_testing_data, benchmark):
                                   n_cores=2)
 
     assert isclose(res[0][0], 0.17262, abs_tol=10-6)
+    assert isclose(res[0][1], 0.16198, abs_tol=10-6)
 
 
 def test_phase_sync(create_testing_data, benchmark):
