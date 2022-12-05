@@ -95,10 +95,9 @@ class Method:
         if self._compute_function is not None:
             for key in self._params.keys():
                 if key not in func_sig.parameters.keys():
-                    if key != 'fs':
-                        warnings.warn(f"Unrecognized keyword argument {key}.\
-                                        It will be ignored",
-                                      RuntimeWarning)
+                    warnings.warn(f"Unrecognized keyword argument {key}.\
+                                    It will be ignored",
+                                  RuntimeWarning)
                     keys_to_pop.append(key)
         for key in keys_to_pop:
             self._params.pop(key)

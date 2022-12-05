@@ -16,7 +16,7 @@ from ...utils.thresholds import th_std
 from ...utils.method import Method
 
 
-def detect_hfo_ll(sig, fs, threshold=3, window_size=100,
+def detect_hfo_ll(sig, fs=5000, threshold=3, window_size=100,
                   window_overlap=0.25):
     """
     Line-length detection algorithm.

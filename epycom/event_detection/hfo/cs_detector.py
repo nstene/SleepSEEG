@@ -53,7 +53,7 @@ from ...utils.method import Method
 #    return
 
 
-def detect_hfo_cs_beta(sig, fs, threshold=0.1, cycs_per_detect=4., mp=1):
+def detect_hfo_cs_beta(sig, fs=5000, threshold=0.1, cycs_per_detect=4., mp=1):
     """
     Beta version of CS detection algorithm. Which was used to develop
     CS detection algorithm.

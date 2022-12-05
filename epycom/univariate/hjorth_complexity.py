@@ -13,7 +13,7 @@ from .hjorth_mobility import compute_hjorth_mobility
 from ..utils.method import Method
 
 
-def compute_hjorth_complexity(signal, fs):
+def compute_hjorth_complexity(signal, fs=5000):
     """
     Compute Hjorth complexity of time series
 

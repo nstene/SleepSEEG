@@ -15,7 +15,7 @@ from ...validation.util import check_detection_overlap
 from ...utils.method import Method
 
 
-def detect_hfo_hilbert(sig, fs, low_fc=80, high_fc=600, threshold=3,
+def detect_hfo_hilbert(sig, fs=5000, low_fc=80, high_fc=600, threshold=3,
                        band_spacing='linear', num_bands=300,
                        cyc_th=1, gap_th=1, mp=1):
     """
