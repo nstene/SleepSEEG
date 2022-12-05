@@ -27,10 +27,8 @@ def compute_relative_entropy(sig):
 
     Returns
     -------
-    ren12: float
-        value of relative entropy between sig[0] and sig[1]
-    ren21: float
-        value of relative entropy between sig[1] and sig[0]
+    ren: float
+        Directional value of relative entropy between sig[0] and sig[1]
 
     Example:
     -------
@@ -38,7 +36,7 @@ def compute_relative_entropy(sig):
     """
 
     if type(sig) != np.ndarray:
-        raise TypeError(f"Signals have to be in numpy arrays!")
+        raise TypeError("Signals have to be in numpy arrays!")
 
     if sig.ndim != 2:
         raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
@@ -48,15 +46,11 @@ def compute_relative_entropy(sig):
     h2 = np.histogram(sig[1], 10)
 
     ren = entropy(h1[0], h2[0])
-    ren21 = entropy(h2[0], h1[0])
-
-    if ren21 > ren:
-        ren = ren21
 
     if ren == float('Inf'):
         ren = np.nan
 
-    return ren, ren21
+    return ren
 
 
 class RelativeEntropy(Method):
@@ -64,14 +58,12 @@ class RelativeEntropy(Method):
     algorithm = 'RELATIVE_ENTROPY'
     algorithm_type = 'bivariate'
     version = '2.0.0'
-    dtype = [('ren12', 'float32'),
-             ('ren21', 'float32')]
+    dtype = [('ren', 'float32')]
 
     def __init__(self, **kwargs):
         """
         Calculation of Kullback-Leibler divergence:
         relative entropy of sig1 with respect to sig2
-        and relative entropy of sig2 with respect to sig1
         """
 
         super().__init__(compute_relative_entropy, **kwargs)
