@@ -110,8 +110,6 @@ def test_detect_hfo_hilbert(create_testing_eeg_data, benchmark):
 def test_detect_hfo_cs_beta(create_testing_eeg_data, benchmark):
     compute_instance = CSDetector()
     compute_instance.params = {'fs': 5000,
-                               'low_fc': 40,
-                               'high_fc': 1000,
                                'threshold': 0.1,
                                'cycs_per_detect': 4.0}
 
