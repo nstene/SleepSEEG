@@ -8,3 +8,4 @@ from .hfo.nicolas_detector import detect_hfo_nicolas, NicolasDetector
 # Spikes
 from .spike.barkmeier_detector import (detect_spikes_barkmeier,
                                        BarkmeierDetector)
+from .spike.janca_detector import detect_spikes_janca, JancaDetector
