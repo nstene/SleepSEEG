@@ -162,15 +162,15 @@ def detect_hfo_nicolas(sig, fs=None, mp=1, threshold=3):
     Parameters
     ----------
     sig: np.ndarray
-      1D raw signal
+        1D raw signal
     fs: float
-      Sampling frequency
+        Sampling frequency
     mp: int
-      Number of processors to use (recommended to use 1 processor and
-                                   implement multiprocessing in run_windowed
-                                   fuction)
-   threshold: float
-       RMS of background times this value
+        Number of processors to use (recommended to use 1 processor and
+                                     implement multiprocessing in run_windowed
+                                     function)
+    threshold: float
+        RMS of background times this value
 
     Returns
     -------
