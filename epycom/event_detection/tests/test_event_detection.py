@@ -6,21 +6,23 @@
 # Std imports
 from math import isclose
 
-# Third pary imports
+# Third party imports
 from scipy.signal import butter, filtfilt
 
 # Local imports
-from epycom.event_detection import BarkmeierDetector
+from epycom.event_detection import BarkmeierDetector, JancaDetector
 
 from epycom.event_detection import (LineLengthDetector,
                                     RootMeanSquareDetector,
                                     HilbertDetector,
-                                    CSDetector)
+                                    CSDetector,
+                                    NicolasDetector)
 
 
 # ----- Spikes -----
-def test_detect_spikes(create_testing_eeg_data, benchmark):
+def test_detect_spikes_barkmeier(create_testing_eeg_data, benchmark):
     compute_instance = BarkmeierDetector()
+    compute_instance.params = {'fs': 5000}
     dets = benchmark(compute_instance.run_windowed,
                      create_testing_eeg_data, 50000)
     compute_instance.run_windowed(create_testing_eeg_data,
@@ -33,6 +35,28 @@ def test_detect_spikes(create_testing_eeg_data, benchmark):
                      0.05,
                      1486.8751,
                      0.0376)
+
+    for exp_val, det in zip(expected_vals, dets[0]):
+        assert isclose(det, exp_val, abs_tol=10e-5)
+
+
+def test_detect_spikes_janca(create_testing_eeg_data, benchmark):
+    compute_instance = JancaDetector()
+    compute_instance.params = {'fs': 5000}
+    dets = benchmark(compute_instance.run_windowed,
+                     create_testing_eeg_data, 5000*60)
+    compute_instance.run_windowed(create_testing_eeg_data,
+                                  5000*60,
+                                  n_cores=2)
+
+    print(dets)
+    expected_vals = (20225,
+                     1.,
+                     10.159894,
+                     20250,
+                     25,
+                     29.488527,
+                     0)
 
     for exp_val, det in zip(expected_vals, dets[0]):
         assert isclose(det, exp_val, abs_tol=10e-5)
@@ -90,7 +114,8 @@ def test_detect_hfo_hilbert(create_testing_eeg_data, benchmark):
     compute_instance.params = {'fs': 5000,
                                'low_fc': 80,
                                'high_fc': 600,
-                               'threshold': 7}
+                               'threshold': 7,
+                               'num_bands': 50}
     dets = benchmark(compute_instance.run_windowed,
                      create_testing_eeg_data, 50000)
 
@@ -109,8 +134,6 @@ def test_detect_hfo_hilbert(create_testing_eeg_data, benchmark):
 def test_detect_hfo_cs_beta(create_testing_eeg_data, benchmark):
     compute_instance = CSDetector()
     compute_instance.params = {'fs': 5000,
-                               'low_fc': 40,
-                               'high_fc': 1000,
                                'threshold': 0.1,
                                'cycs_per_detect': 4.0}
 
@@ -124,6 +147,29 @@ def test_detect_hfo_cs_beta(create_testing_eeg_data, benchmark):
     # Only the second HFO is caught by CS (due to signal artificiality)
     expected_vals = [(34992, 35090),  # Band detection
                      (34992, 35090)]  # Conglomerate detection
+
+    for exp_val, det in zip(expected_vals, dets):
+        assert det[0] == exp_val[0]
+        assert det[1] == exp_val[1]
+
+
+def test_detect_hfo_nicolas(create_testing_eeg_data, benchmark):
+    fs = 5000
+    b, a = butter(3, [80 / (fs / 2), 600 / (fs / 2)], 'bandpass')
+    filt_data = filtfilt(b, a, create_testing_eeg_data)
+    window_size = int((1 / 80) * fs)
+
+    compute_instance = NicolasDetector()
+    compute_instance.params = {'fs': fs}
+    dets = benchmark(compute_instance.run_windowed,
+                     filt_data, 50000)
+
+    compute_instance.run_windowed(filt_data,
+                                  50000,
+                                  n_cores=2)
+
+    expected_vals = [(4941, 5238),
+                     (4956, 5215)]
 
     for exp_val, det in zip(expected_vals, dets):
         assert det[0] == exp_val[0]

@@ -8,6 +8,8 @@
 from math import isclose
 
 # Third pary imports
+import scipy.signal as sp
+import numpy as np
 
 # Local imports
 from epycom.univariate import (SignalStats,
@@ -21,7 +23,9 @@ from epycom.univariate import (SignalStats,
                                AutoregressiveResidualModulation,
                                ShannonEntropy,
                                ApproximateEntropy,
-                               SampleEntropy)
+                               SampleEntropy, 
+                               LowFreqMarker
+                               )
 
 
 def test_signal_stats(create_testing_data, benchmark):
@@ -96,7 +100,8 @@ def test_modulation_index(create_testing_data, benchmark):
 def test_mean_vector_length(create_testing_data, benchmark):
     compute_instance = MeanVectorLength(fs=5000)
     res = benchmark(compute_instance.run_windowed,
-                    create_testing_data, 50000)
+                    create_testing_data, 
+                    50000)
     compute_instance.run_windowed(create_testing_data,
                                   5000,
                                   n_cores=2)
@@ -159,3 +164,15 @@ def test_sample_entropy(create_testing_data, benchmark):
                                   n_cores=2)
     assert isclose(res[0][0], 1.7763994, abs_tol=10e-6)
 
+
+def test_low_f_marker(create_testing_data, benchmark):
+    compute_instance = LowFreqMarker()
+    compute_instance.params = {'fs': 5000}
+    res = benchmark(compute_instance.run_windowed,
+                    create_testing_data,
+                    50000)
+    compute_instance.run_windowed(create_testing_data,
+                                  50000,
+                                  n_cores=2)
+
+    assert isclose(res[0][0],  0.4149408406426963, abs_tol=10e-6)

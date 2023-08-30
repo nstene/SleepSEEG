@@ -42,6 +42,9 @@ def compute_phase_sync(sig):
     if type(sig) != np.ndarray:
         raise TypeError(f"Signals have to be in numpy arrays!")
 
+    if sig.ndim != 2:
+        raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
+
     # OPTIMIZE: check if this can be done in one array
     sig1_ph = np.angle(hilbert(sig[0]))
     sig2_ph = np.angle(hilbert(sig[1]))

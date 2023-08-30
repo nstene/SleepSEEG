@@ -106,7 +106,7 @@ def process_matrix(matrix, value, threshold_func, threshold_val):
         Value string for the field in the structured array accross which the
         aggregation function will operate.
     threshold_func : function object
-        Function for calculating 
+        Function for calculating threshold.
     threshold_val : float
         Threshold for the threshold function.
 

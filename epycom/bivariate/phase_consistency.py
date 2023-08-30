@@ -48,6 +48,9 @@ def compute_phase_const(sig, lag=500, lag_step=50):
     if type(sig) != np.ndarray:
         raise TypeError(f"Signals have to be in numpy arrays!")
 
+    if sig.ndim != 2:
+        raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
+
     nstep = int((sig.shape[1] - lag) / lag_step)
 
     phs_sync_temp = []

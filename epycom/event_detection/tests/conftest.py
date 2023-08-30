@@ -24,7 +24,7 @@ def create_testing_eeg_data():
              250.0, 425.0, 500.0, 800.0, 1500.0]
 
     fs = 5000
-    n = fs * 10
+    n = fs * 60
     data = np.zeros(n)
     basic_amp = 10
 

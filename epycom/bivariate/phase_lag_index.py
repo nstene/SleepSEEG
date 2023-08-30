@@ -56,6 +56,9 @@ def compute_pli(sig, lag=500, lag_step=50):
     if type(sig) != np.ndarray:
         raise TypeError(f"Signals have to be in numpy arrays!")
 
+    if sig.ndim != 2:
+        raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
+
     nstep_lag = int(lag * 2 / lag_step)
 
     sig1_w = sig[0]

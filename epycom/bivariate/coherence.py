@@ -14,7 +14,7 @@ from scipy.signal import coherence
 from ..utils.method import Method
 
 
-def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
+def compute_coherence(sig, fs=None, fband=[1.0, 4.0], lag=0, lag_step=0,
                       fft_win=1):
     """
     Magnitude squared coherence between two time series (raw,
@@ -60,6 +60,9 @@ def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
 
     if type(sig) != np.ndarray:
         raise TypeError("Signals have to be in numpy arrays!")
+
+    if sig.ndim != 2:
+        raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
 
     if lag == 0:
         lag_step = 1
