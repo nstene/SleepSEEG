@@ -272,10 +272,11 @@ def detect_spikes_janca(sig, fs=None,
         obvious_M = markers_high
 
         out_dtype = [('pos', 'float32'),  # spike position
-                     ('dur', 'float32'),  # spike duration - fix value 5 ms
+                     # ('dur', 'float32'),  # spike duration - fix value 5 ms
                      ('con', 'float32'),  # spike condition
-                     ('weight', 'float32'),  # spike weight "CDF"
-                     ('pdf', 'float32')]  # spike probability "PDF"
+                     # ('weight', 'float32'),  # spike weight "CDF"
+                     # ('pdf', 'float32')  # spike probability "PDF"
+                     ]
 
         t_dur = 0.005
 
@@ -286,10 +287,10 @@ def detect_spikes_janca(sig, fs=None,
             sub_out = np.empty(len(idx), dtype=out_dtype)
 
             sub_out["pos"] = idx/fs
-            sub_out["dur"] = t_dur*np.ones((len(idx)))
+            # sub_out["dur"] = t_dur*np.ones((len(idx)))
             sub_out["con"] = np.ones((len(idx)))
-            sub_out["weight"] = envelope_cdf[idx]
-            sub_out["pdf"] = envelope_pdf[idx]
+            # sub_out["weight"] = envelope_cdf[idx]
+            # sub_out["pdf"] = envelope_pdf[idx]
 
         else:
             sub_out = np.empty(0, dtype=out_dtype)
@@ -309,10 +310,10 @@ def detect_spikes_janca(sig, fs=None,
                                                   round(idx[i]+0.01*fs))]):
 
                         amby_out["pos"] = idx[i]/fs
-                        amby_out["dur"] = t_dur
+                        # amby_out["dur"] = t_dur
                         amby_out["con"] = 0.5
-                        amby_out["weight"] = envelope_cdf[idx[i]]
-                        amby_out["pdf"] = envelope_pdf[idx[i]]
+                        # amby_out["weight"] = envelope_cdf[idx[i]]
+                        # amby_out["pdf"] = envelope_pdf[idx[i]]
 
                 sub_out = np.concatenate([sub_out, amby_out])
 
@@ -330,13 +331,14 @@ def detect_spikes_janca(sig, fs=None,
         point = np.vstack((point1.T, point2.T)).T
         point[:, 1] += 1
 
-        discharges_dtype = [('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
+        discharges_dtype = [# ('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
                             ('MA', 'float32'),  # max. amplitude of envelope
                             ('MP', 'float32'),  # event start position
                             ('MD', 'float32'),  # event duration
-                            ('MW', 'float32'),  # statistical weight
-                            ('MPDF', 'float32'),  # statistical weight
-                            ('MRAW', 'float32')]  # amplitude of signal
+                            # ('MW', 'float32'),  # statistical weight
+                            # ('MPDF', 'float32'),  # statistical weight
+                            ('MRAW', 'float32')  # amplitude of signal
+                            ]
 
         sub_discharges = np.zeros(point.shape[0], dtype=discharges_dtype)
         for k in range(0, point.shape[0]):
@@ -366,10 +368,10 @@ def detect_spikes_janca(sig, fs=None,
             mp = row[-1] + point[k, 0]
 
             sub_discharges["MRAW"][k] = mraw
-            sub_discharges["MV"][k] = mv
+            # sub_discharges["MV"][k] = mv
             sub_discharges["MA"][k] = ma
-            sub_discharges["MW"][k] = mw
-            sub_discharges["MPDF"][k] = mpdf
+            # sub_discharges["MW"][k] = mw
+            # sub_discharges["MPDF"][k] = mpdf
             sub_discharges["MD"][k] = (point[k, 1]-point[k, 0]-1)/fs
             sub_discharges["MP"][k] = mp/fs
 
@@ -396,7 +398,9 @@ def detect_spikes_janca(sig, fs=None,
     out = np.concatenate(out_list)
 
     # Convert seconds to samples
-    out["pos"] = out["pos"] * orig_fs
+    out["pos"] *= orig_fs
+    out["MD"] *= orig_fs
+    out["MP"] *= orig_fs
 
     return list(out)  # discharges
 
@@ -536,16 +540,16 @@ class JancaDetector(Method):
     version = '1.0.0'
 
     dtype = [('pos', 'float32'),  # spike position
-             ('dur', 'float32'),  # spike duration - fix value 5 ms
+             # ('dur', 'float32'),  # spike duration - fix value 5 ms
              ('con', 'float32'),  # spike condition
-             ('weight', 'float32'),  # spike weight "CDF"
-             ('pdf', 'float32'),  # spike probability "PDF"
-             ('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
+             # ('weight', 'float32'),  # spike weight "CDF"
+             # ('pdf', 'float32'),  # spike probability "PDF"
+             # ('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
              ('MA', 'float32'),  # max. amplitude of envelope
              ('MP', 'float32'),  # event start position
              ('MD', 'float32'),  # event duration
-             ('MW', 'float32'),  # statistical weight
-             ('MPDF', 'float32'),  # statistical weight
+             # ('MW', 'float32'),  # statistical weight
+             # ('MPDF', 'float32'),  # statistical weight
              ('MRAW', 'float32')]
 
     def __init__(self, **kwargs):
