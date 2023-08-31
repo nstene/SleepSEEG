@@ -404,7 +404,7 @@ def detect_spikes_janca(sig, fs=None,
     out["event_duration"] *= orig_fs
     out["event_start"] *= orig_fs
 
-    return list(out)  # discharges
+    return out[['event_peak', 'max_amplitude_env', 'max_amplitude']].tolist()
 
 
 def _local_maxima_detection(envelope, prah_int, fs, polyspike_union_time):
@@ -543,13 +543,13 @@ class JancaDetector(Method):
 
     dtype = [('event_peak', 'float32'),  # spike position
              # ('dur', 'float32'),  # spike duration - fix value 5 ms
-             ('condition', 'float32'),  # spike condition
+             # ('condition', 'float32'),  # spike condition
              # ('weight', 'float32'),  # spike weight "CDF"
              # ('pdf', 'float32'),  # spike probability "PDF"
              # ('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
              ('max_amplitude_env', 'float32'),  # max. amplitude of envelope
-             ('event_start', 'float32'),  # event start position
-             ('event_duration', 'float32'),  # event duration
+             # ('event_start', 'float32'),  # event start position
+             # ('event_duration', 'float32'),  # event duration
              # ('MW', 'float32'),  # statistical weight
              # ('MPDF', 'float32'),  # statistical weight
              ('max_amplitude', 'float32')]
