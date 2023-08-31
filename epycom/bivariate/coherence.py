@@ -14,7 +14,7 @@ from scipy.signal import coherence
 from ..utils.method import Method
 
 
-def compute_coherence(sig, fs=None, fband=[1.0, 4.0], lag=0, lag_step=0,
+def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
                       fft_win=1):
     """
     Magnitude squared coherence between two time series (raw,
