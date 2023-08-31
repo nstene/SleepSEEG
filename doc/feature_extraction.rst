@@ -141,7 +141,7 @@ of the brain.
 
       sig = np.array([y1,-y1])
       lag = 250
-      # other variables stands same as in example Coh-example2.1.1 above
+      # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
         >> 0.9999999999999999 0
       # the coherence between the opposite signals is 1
@@ -154,12 +154,12 @@ of the brain.
     signal, 'i' stands for the number of iterations.
 
     .. code-block:: py
-      :name: Coh-example2.1.4
+      :name: Coh-example2.1.4.1
 
       y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
       sig = np.array([y1,y2])
       lag = 250
-      # other variables stands same as in example Coh-example2.1.1 above
+      # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
         >> 0.6180260559346161 0
       # the coherence between the opposite signals is 1
@@ -176,16 +176,21 @@ of the brain.
 
       y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
       sig = np.array([y1,y2])
+      lag = 250
+      # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
         >> 0.40572228497072715 70
 
     .. figure:: images/2.1.4.2Example.gif
       :name: Fig2.1.4.2
 
+    This gif shows, how does program go through the data with lag = 250 and 
+    compute coherence between them. The y(n_i) represents n_i_th value of 
+    signal, 'i' stands for the number of iterations.
 
-
-..
-  TODO
+    Though neither of two correlations above is significantly large. It may 
+    show, how this feature could determine the difference between two signals 
+    that the human eye cannot see.
 
 - Linear correlation
   
@@ -351,14 +356,7 @@ of the brain.
       On y-axis are values of sin, x-axis represents koeficients of the values.
       The correlation of opposite signals is -1.
 
-.. math:: \sigma_\mathrm{mean} = \frac{\sigma}{\sqrt{N}}
-   :label: math-sample
 
-.. math::
-
-  \nabla \cdot \mathbf{E} = \frac{\rho}{\epsilon_0}
-  \sqrt{a^2 + b^2} = c
-  \nabla \cdot \mathbf{B} = 0
 
 .. questions
   lag < 0 ? https://stackoverflow.com/questions/509211/how-slicing-in-python-works
