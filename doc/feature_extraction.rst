@@ -76,33 +76,140 @@ Univariate feature extraction
 
 Bivariate feature extraction
 *********************************
-Bivariate feature extraction algorithms server for calculating relationships between two signals. 
-They can be used for example to obtain connectivity between different areas of the brain.
+Bivariate feature extraction algorithms server for calculating relationships 
+between two signals. 
+They can be used for example to obtain connectivity between different areas 
+of the brain.
 
 - Coherence
 
-  - The coherence (Coh) varies in the interval :math:`<0,1>` and reflects frequency similarities between two signals.
-    :math:`Coh=1` indicates, the one signal is directly influenced by the second signal, :math:`Coh=0` indicates no influence by second signal.
-    The coherence between two signals can be calculated with a time-lag. Maximum time-lag should not exceed :math:`fmax/2`.
+  - The coherence (Coh) varies in the interval :math:`<0,1>` and reflects 
+    frequency similarities between two signals.
+    :math:`Coh=1` indicates, the one signal is directly influenced by the 
+    second signal, :math:`Coh=0` indicates no influence by second signal.
+    The coherence between two signals can be calculated with a time-lag. 
+    Maximum time-lag should not exceed :math:`fmax/2`.
 
-  - Coh is calcualted by coherence method in scipy.signal as: :math:`Coh(X,Y)=[|P(X,Y)|/(√(P(X,X)・P(Y,Y)))]`. 
-    Where |・| stands for absolute value, √ stands for square root, P(X,X) and P(Y,Y) stands for power spectral density estimation and P(X,Y) stands for cross spectral density estimation.
+  - Coh is calcualted by coherence method in scipy.signal as: 
+    :math:`Coh(X,Y)=[|P(X,Y)|/(√(P(X,X)・P(Y,Y)))]`. 
+    Where X,Y are the two evaluated signals, |・| stands for absolute value, 
+    √ stands for square root, P(X,X) and P(Y,Y) stands for power spectral 
+    density estimation and P(X,Y) stands for cross spectral density estimation.
     The P(X,X) is calcualted as
+
+  - Lagged coherence is calculated (LagCoh) by coherence method in scipy.signal 
+    as: :math:`LagCoh(X',Y)=[|P(X',Y)|/(√(P(X',X')・P(Y,Y)))]`.
+    Where X' is signal lagged by lag k and Y is nonlagged signal, |・| stands 
+    for absolute value, √ stands for square root, P(X',X') and P(Y,Y) stands 
+    for power spectral density estimation and P(X',Y) stands for cross spectral 
+    density estimation.
+
+  - From all time-lagged values, only the maximum value with its time-lag 
+    koeficient are returned.
+
+  - Example
+
+    .. code-block:: py
+      :name: Coh-example2.1.1
+
+      x1=np.linspace(0.0, 8*np.pi, num=1001)
+      y1=np.sin(x1)
+      sig = np.array([y1,y1])
+      fs=250
+      fband=[1.0, 4.0]
+      lag=0
+      lag_step=1
+      fft_win=250
+      compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
+        >> 0.9999999999999999 0
+      # the coherence between the same signals is 1
+
+    .. code-block:: py
+      :name: Coh-example2.1.2
+
+      sig = np.array([y1,-y1])
+      # other variables stands same as in example Coh-example2.1.1 above
+      compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
+        >> 0.9999999999999999 0
+      # the coherence between the opposite signals is 1
+
+    .. figure:: images/2.1.2Example.png
+      :name: Fig2.1.2
+
+    .. code-block:: py
+      :name: Coh-example2.1.3
+
+      sig = np.array([y1,-y1])
+      lag = 250
+      # other variables stands same as in example Coh-example2.1.1 above
+      compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
+        >> 0.9999999999999999 0
+      # the coherence between the opposite signals is 1
+
+    .. figure:: images/2.1.3Example.gif
+      :name: Fig2.1.3
+
+    This gif shows, how does program go through the data with lag = 250 and 
+    compute coherence between them. The y(n_i) represents n_i_th value of 
+    signal, 'i' stands for the number of iterations.
+
+    .. code-block:: py
+      :name: Coh-example2.1.4
+
+      y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
+      sig = np.array([y1,y2])
+      lag = 250
+      # other variables stands same as in example Coh-example2.1.1 above
+      compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
+        >> 0.6180260559346161 0
+      # the coherence between the opposite signals is 1
+
+    .. figure:: images/2.1.4.1Example.gif
+      :name: Fig2.1.4.1
+
+    This gif shows, how does program go through the data with lag = 250 and 
+    compute coherence between them. The y(n_i) represents n_i_th value of 
+    signal, 'i' stands for the number of iterations.
+
+    .. code-block:: py
+      :name: Coh-example2.1.4.2
+
+      y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
+      sig = np.array([y1,y2])
+      compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
+        >> 0.40572228497072715 70
+
+    .. figure:: images/2.1.4.2Example.gif
+      :name: Fig2.1.4.2
+
+
 
 ..
   TODO
 
 - Linear correlation
   
-  - The linear correlation (LC) varies in interval :math:`<-1,1>` and reflects shape similarities between two signals. 
-    :math:`LC=1` indicates perfect conformity between two signals, :math:`LC=-1` indicates opposite signals and :math:`LC=0` indicates two different signals.
-    The linear correlation between two signals can be calculated with a time-lag. Maximum time-lag should not exceed :math:`fmax/2`.
+  - The linear correlation (LC) varies in interval :math:`<-1,1>` and reflects 
+    shape similarities between two signals. 
+    :math:`LC=1` indicates perfect conformity between two signals, 
+    :math:`LC=-1` indicates opposite signals and :math:`LC=0` indicates two 
+    different signals.
+    The linear correlation between two signals can be calculated with a 
+    time-lag. Maximum time-lag should not exceed :math:`fmax/2`.
 
-  - LC is calculated by Pearson’s correlation coefficient as: :math:`LC(X,Y)=[cov(X,Y)/(std(X)・std(Y))]`, where X,Y are the two evaluated signals, cov is the covariance and std is the standard deviation. 
+  - LC is calculated by Pearson’s correlation coefficient as: 
+    :math:`LC(X,Y)=[cov(X,Y)/(std(X)・std(Y))]`, 
+    where X,Y are the two evaluated signals, cov is the covariance and std is 
+    the standard deviation. 
 
-  - Lagged linear correlation (LLC) for each time-lag k was calculated by Pearson’s correlation coefficient as: :math:`LLC(X',Y)=[cov(X',Y)/std(X')・std(Y)]`, where X' is signal lagged by lag k and Y is nonlagged signal, cov is the covariance and std is the standard deviation. 
+  - Lagged linear correlation (LLC) for each time-lag k was calculated by 
+    Pearson’s correlation coefficient as: 
+    :math:`LLC(X',Y)=[cov(X',Y)/std(X')・std(Y)]`, where X' is signal lagged by 
+    lag k and Y is nonlagged signal, cov is the covariance and std is the 
+    standard deviation. 
   
-  - From all time-lagged values, only the maximum value with its time-lag koeficient are returned.
+  - From all time-lagged values, only the maximum value with its time-lag 
+    koeficient are returned.
 
   - Example
 
@@ -140,14 +247,16 @@ They can be used for example to obtain connectivity between different areas of t
             -9.51056516e-01 -9.51056516e-01 -5.87785252e-01 -7.34788079e-16
             5.87785252e-01  9.51056516e-01  9.51056516e-01  5.87785252e-01
             8.57252759e-16]]
-      #2 signals are simulated as 2 sin functions, one of them is delayed by 'pi' so the lag is 5
-      #initial lag was 8, so first and last 8 values of sig[0] were discarded
+      # 2 signals are simulated as 2 sin functions, one of them is delayed by 
+      #  'pi' so the lag is 5
+      # initial lag was 8, so first and last 8 values of sig[0] were discarded
     
     .. figure:: images/2.2.4Example.png
       :name: Fig2.2.0
 
     To create this graph, two siganls form Example above were used. 
-    On y-axis are values of sig[0] and sig[1], x-axis represents koeficients of the values.
+    On y-axis are values of sig[0] and sig[1], x-axis represents koeficients 
+    of the values.
 
     .. code-block:: py
       :name: LinCorr-example2.2.1
@@ -160,12 +269,14 @@ They can be used for example to obtain connectivity between different areas of t
     .. figure:: images/2.2.1Example.gif
       :name: Fig2.2.1
 
-      This gif shows, how does program go through the data from Example1 and compute Pearson’s correlation coefficient between them. 
-      The y(n_i) represents n_i_th value of signal, 'i' stands for the number of iterations. 
+      This gif shows, how does program go through the data from Example1 and 
+      compute Pearson’s correlation coefficient between them. 
+      The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
+      of iterations. 
 
       If  :math:`i == lag` , signals are not shiftet
-          | :math:`i < lag` , signal sig[1] is after sig[0]. Delay :math:`tau ? 0`
-          | :math:`i > lag` , signal sig[0] is after sig[1]. Delay :math:`tau ? 0` 
+        | :math:`i < lag` , signal sig[1] is after sig[0].
+        | :math:`i > lag` , signal sig[0] is after sig[1]. 
       :math:`lag = 8` in this example
 
       At the end the lag with greatest correlation is returned.
@@ -184,12 +295,14 @@ They can be used for example to obtain connectivity between different areas of t
     .. figure:: images/2.2.2Example.gif
       :name: Fig2.2.2
 
-      This gif shows, how does program go through the data from Example2 and compute Pearson’s correlation coefficient between them. 
-      The y(n_i) represents n_i_th value of signal, 'i' stands for the number of iterations. 
+      This gif shows, how does program go through the data from Example2 and 
+      compute Pearson’s correlation coefficient between them. 
+      The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
+      of iterations. 
 
       If  :math:`i == lag` , signals are not shiftet
-          | :math:`i < lag` , signal sig[1] is after sig[0]. Delay :math:`tau ? 0`
-          | :math:`i > lag` , signal sig[0] is after sig[1]. Delay :math:`tau ? 0` 
+        | :math:`i < lag` , signal sig[1] is after sig[0].
+        | :math:`i > lag` , signal sig[0] is after sig[1]. 
       :math:`lag = 8` in this example
 
       At the end the lag with greatest correlation is returned.
@@ -208,12 +321,14 @@ They can be used for example to obtain connectivity between different areas of t
     .. figure:: images/2.2.3Example.gif
       :name: Fig2.2.3
 
-      This gif shows, how does program go through the data from Example2 and compute Pearson’s correlation coefficient between them. 
-      The y(n_i) represents n_i_th value of signal, 'i' stands for the number of iterations. 
+      This gif shows, how does program go through the data from Example2 and 
+      compute Pearson’s correlation coefficient between them. 
+      The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
+      of iterations. 
 
       If  :math:`i == lag` , signals are not shiftet
-          | :math:`i < lag` , signal sig[1] is after sig[0]. Delay :math:`tau ? 0`
-          | :math:`i > lag` , signal sig[0] is after sig[1]. Delay :math:`tau ? 0` 
+        | :math:`i < lag` , signal sig[1] is after sig[0].
+        | :math:`i > lag` , signal sig[0] is after sig[1]. 
       :math:`lag = 8` in this example
 
       At the end the lag with greatest correlation is returned.
