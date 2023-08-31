@@ -17,8 +17,9 @@ def compute_lincorr(sig, lag=0, lag_step=0):
     """
     Linear correlation (Pearson's coefficient) between two time series
 
-    When lag and lag_step is not 0, shifts the sig[1] from negative
-    to positive lag and takes the max correlation (best fit)
+    If lag and lag_step is not 0, calculates evolution of correlation by
+    shifting the sig[1] from from negative lag to positive lag.
+    From list of correlations takes the max correlation (best fit).
 
     Parameters
     ----------
@@ -31,17 +32,20 @@ def compute_lincorr(sig, lag=0, lag_step=0):
 
     Returns
     -------
-    lincorr: list
+    max_lincorr: float
         maximum linear correlation in shift
-    tau: float
-        shift of maximum correlation in samples,
-        value in range <-lag,+lag> (float)
-        tau<0: sig[1] -> sig[0]
-        tau>0: sig[0] -> sig[1]
+        max_lincorr = 1:    perfect conformity sig[1] and sig[0]
+        max_lincorr = -1:   opposite signals
+    k: int
+        shift of maximum coherence in samples,
+        value in range <0,2*lag> (int)
+        k<lag: sig[1] -> sig[0]
+        k=lag: no shift in signals
+        k>lag: sig[0] -> sig[1]
 
     Example
     -------
-    lincorr,tau = compute_lincorr(sig, 200, 20)
+    max_lincorr,k = compute_lincorr(sig, 200, 20)
     """
 
     if type(sig) != np.ndarray:
@@ -50,7 +54,7 @@ def compute_lincorr(sig, lag=0, lag_step=0):
     if sig.ndim != 2:
         raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
 
-    if lag == 0:
+    if lag_step == 0:
         lag_step = 1
     nstep_lag = int(lag * 2 / lag_step)
 
@@ -84,15 +88,15 @@ class LinearCorrelation(Method):
         """
         Linear correlation (Pearson's coefficient) between two time series
 
-        When win and win_step is not 0, calculates evolution of correlation
-
-        When win>len(sig) or win<=0, calculates only one corr coef
-
-        When lag and lag_step is not 0, shifts the sig[1] from negative
-        to positive lag and takes the max correlation (best fit)
+        If lag and lag_step is not 0, calculates evolution of correlation by
+        shifting the sig[1] from from negative lag to positive lag.
+        From list of correlations takes the max correlation (best fit).
 
         Parameters
         ----------
+        sig: np.array
+            2D numpy array of shape (signals, samples), 
+            time series (int, float)
         lag: int
             negative and positive shift of time series in samples
         lag_step: int
