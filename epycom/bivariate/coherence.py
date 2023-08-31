@@ -15,14 +15,15 @@ from ..utils.method import Method
 
 
 def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
-                      fft_win=1):
+                      fft_win=5000):
     """
     Magnitude squared coherence between two time series (raw,
     not filtered signals)
 
-    When win and win_step is not 0, calculates evolution of coherence
+    If fft_win (fast Fourier transform window) is not 0, calculates evolution 
+    of coherence
 
-    When win>len(sig) or win<=0, calculates only one coherence value
+    If fft_win>len(sig) or fft_win<=0, calculates only one coherence value
 
     When lag and lag_step is not 0, shifts the sig[1] from negative
     to positive lag and takes the max coherence (best fit)
@@ -33,6 +34,7 @@ def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
         2D numpy array of shape (signals, samples), time series (int, float)
     fs: int, float
         sampling frequency in Hz
+        for good ressults, fs > 250 is recommended
     fband: list
         frequency range in Hz (float)
     lag: int
@@ -40,22 +42,23 @@ def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
     lag_step: int
         step of shift in samples
     fft_win: int
-        length of fft window in sec
+        length of fft window in samples
 
     Returns
     -------
-    max_coh: list
+    max_coh: float
         maximum coherence in shift
-    tau: float
+    k: int
         shift of maximum coherence in samples,
-        value in range <-lag,+lag> (float)
-        tau<0: sig[1] -> sig[0]
-        tau>0: sig[0] -> sig[1]
+        value in range <0,2*lag> (int)
+        k<lag: sig[1] -> sig[0]
+        k=lag: no shift in signals
+        k>lag: sig[0] -> sig[1]
 
     Example
     -------
-    max_coh,tau = compute_coherence(sig, fs=5000, fband=[1.0,4.0], lag=0,
-                                    lag_step=0, win=0, win_step=0, fft_win=1)
+    max_coh,k = compute_coherence(sig, fs=5000, fband=[1.0,4.0], lag=0,
+                                                lag_step=0, fft_win=5000)
     """
 
     if type(sig) != np.ndarray:
@@ -64,12 +67,13 @@ def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
     if sig.ndim != 2:
         raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
 
-    if lag == 0:
+    if lag_step == 0:
         lag_step = 1
     nstep_lag = int(lag * 2 / lag_step)
 
-    fft_win = int(fft_win*fs)
-    hz_bins = (fft_win/2)/(fs/2)
+    # fft_win = int(fft_win*fs) # this line is not needed due to change fft_win 
+    # #                             from sec to samples
+    hz_bins = fft_win/fs
     fc1 = int(fband[0]*hz_bins)
     fc2 = int(fband[1]*hz_bins)
 
@@ -105,15 +109,19 @@ class Coherence(Method):
         Magnitude squared coherence between two time series (raw,
         not filtered signals)
 
-        When win and win_step is not 0, calculates evolution of coherence
+        If fft_win (fast Fourier transform window) is not 0, calculates 
+        evolution of coherence
 
-        When win>len(sig) or win<=0, calculates only one coherence value
+        If win>len(sig) or win<=0, calculates only one coherence value
 
-        When lag and lag_step is not 0, shifts the sig[1] from negative
+        If lag and lag_step is not 0, shifts the sig[1] from negative
         to positive lag and takes the max coherence (best fit)
 
         Parameters
         ----------
+        sig: np.array
+            2D numpy array of shape (signals, samples), 
+            time series (int, float)
         fs: int, float
             sampling frequency in Hz
         fband: list
@@ -123,7 +131,7 @@ class Coherence(Method):
         lag_step: int
             step of shift in samples
         fft_win: int
-            length of fft window in sec
+            length of fft window in samples
         """
 
         super().__init__(compute_coherence, **kwargs)
