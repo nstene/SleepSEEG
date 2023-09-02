@@ -56,7 +56,7 @@ class LowFreqMarker(Method):
     algorithm = 'LOW_FREQUENCY_MARKER'
     algorithm_type = 'univariate'
     version = '1.0.0'
-    dtype = [('lowFreqMark', 'float32')]
+    dtype = [('low_freq_mark', 'float32')]
 
     def __init__(self, **kwargs):
         """
