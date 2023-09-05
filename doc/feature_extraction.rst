@@ -379,7 +379,7 @@ of the brain.
 - Phase synchrony
 
   Phase synchrony (PS) varies in interval <0,1> and reflects synchrony in phase between two signals. 
-  PS is calculated as PS=√[(<cos(ΦXt)>)2+(<sin(ΦYt)>)2], where ΦXt is instantaneous phase of signal X, ΦYt is instantaneous phase of signal Y, <> stands for mean and √ for square root. 
+  PS is calculated as PS=√[(<cos(ΦXt)>)^2+(<sin(ΦYt)>)^2], where ΦXt is instantaneous phase of signal X, ΦYt is instantaneous phase of signal Y, <> stands for mean and √ for square root. 
   Instantaneous phase ΦXt is calculated as ΦXt=arctan(xH/xt), where xH is the Hilbert transformation of the time signal xt.
 
 .. questgion
