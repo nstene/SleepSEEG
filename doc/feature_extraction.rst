@@ -397,9 +397,113 @@ of the brain.
 
 - Spectra multiplication
 
-  Frequency spectra of two signals, obtained by Fourier transform, are multiplied and transformed back to the time domain, where the mean and std is calculated.
-.. question
-  check, if it could be optimised by convolution, insted ifft(mutipy(fft,fft)) ? https://en.wikipedia.org/wiki/Convolution_theorem
+  - Spectra multiplication (convolution) of two signals is calculated as 
+    :math:`conv(X,Y) = ifft(fft(X)*fft(Y))`, where fft is Fast Fourier 
+    Transform, '*' is element-wise multiplication and ifft is Inverse
+    Fast Fourier Transform and X,Y are the evaluated signals.
+    | To convolved signal the Hilbert transforamation is aplied and from all
+    absolute values the mean and standart deviation is calculated. The mean and
+    standart deviation are both calculated by numpy library, the Hilbert 
+    transform is calculated by scipy.signal library.
+
+  - The Fast Fourier Transform (fft) approach is used, because on big dataset
+    it is proved to be significantly faster, than computing convolution by
+    definition. However, for datasets with :math:`samples < 500` this method
+    is less efective than computing by convolution definition.
+  
+  - The Spectra multiplication mean (SM_mean) varies in the interval 
+    :math:`<0,inf)`.
+    :math:`SM_mean=0` indicates, the one signal is constantly zero,
+    If method evaluates two signals with the phase similarities, the SM_mean 
+    value will be significantly bigger. 
+
+  - Example
+
+  .. code-block:: py
+    :name: LinCorr-example2.7.1
+
+    #Example1
+    x1=np.linspace(0.00, 8*np.pi, num=1001)
+
+    y1=np.sin(x1*0)
+    y2=np.sin(x1)
+    sig = np.array([y1,y2])
+    compute_spect_multp(sig)
+
+      >>0.0 0.0     #np.mean(sig_sm), np.std(max(sig_sm))
+    # The two signals have SM_mean value equal 0 if one of the signals 
+    # is constantly 0
+
+  .. code-block:: py
+    :name: LinCorr-example2.7.2
+
+    #Example2
+    x1=np.linspace(0.00, 8*np.pi, num=1001)
+
+    y1=np.sin(x1)
+    y2=np.sin(x1)
+    sig = np.array([y1,y2])
+    compute_spect_multp(sig)
+
+      >>500.473477696902 0.011583149274828326
+                                          #np.mean(sig_sm), np.std(max(sig_sm))
+
+    # The two signals have high SM_mean value and low SM_std value, if singals
+    # are non-zero and the same
+
+  .. code-block:: py
+    :name: LinCorr-example2.7.3
+
+    #Example3
+    x1=np.linspace(0.00, 8*np.pi, num=1001)
+
+    y1=np.sin(x1*1.1) + np.sin(3*x1)
+    y2=np.sin(x1)
+    sig = np.array([y1,y2])
+    compute_spect_multp(sig)
+
+      >>391.40497112474554 1.126140158602267
+                                          #np.mean(sig_sm), np.std(max(sig_sm))
+
+    # The two signals have high SM_mean value and low SM_std value, if singals
+    # have similar frequency
+
+  .. code-block:: py
+    :name: LinCorr-example2.7.4
+
+    #Example4
+    x1=np.linspace(0.00, 8*np.pi, num=1001)
+
+    y1=10*np.sin(3*x1)
+    y2=11*np.sin(x1)
+    sig = np.array([y1,y2])
+    compute_spect_multp(sig)
+
+      >>52.526392847268205 25.428527556507547
+                                          #np.mean(sig_sm), np.std(max(sig_sm))
+
+    # The two signals should have relativly high SM_mean value even if they are 
+    # phase independent. Than they have also significantly higher SM_std values 
+
+  .. code-block:: py
+    :name: LinCorr-example2.7.5
+
+    #Example5
+    x1=np.linspace(0.00, 8*np.pi, num=1001)
+
+    y1=10*np.sin(3*x1)
+    y2=np.sin(x1)
+    sig = np.array([y1,y2])
+    compute_spect_multp(sig)
+
+      >>4.775126622478946 2.3116843233188766
+                                          #np.mean(sig_sm), np.std(max(sig_sm))
+
+    # The main role in the signals takes the frequency, with lower amplitude
+    # the SM_mean is smaller, but ratio SM_mean/SM_std does not change much
+     
+
+.. convolution?
   https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.fftconvolve.html#scipy.signal.fftconvolve
 
 Event detection
