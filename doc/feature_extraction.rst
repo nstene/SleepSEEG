@@ -401,7 +401,7 @@ of the brain.
     :math:`conv(X,Y) = ifft(fft(X)*fft(Y))`, where fft is Fast Fourier 
     Transform, '*' is element-wise multiplication and ifft is Inverse
     Fast Fourier Transform and X,Y are the evaluated signals.
-    | To convolved signal the Hilbert transforamation is aplied and from all
+  | To convolved signal the Hilbert transforamation is aplied and from all
     absolute values the mean and standart deviation is calculated. The mean and
     standart deviation are both calculated by numpy library, the Hilbert 
     transform is calculated by scipy.signal library.
