@@ -73,7 +73,7 @@ def compute_lincorr(sig, lag=0, lag_step=0):
         corr_val = np.corrcoef(sig1_wl, sig2_wl)
         lincorr.append(corr_val[0][1])
 
-    return np.max(lincorr), lincorr.index(max(lincorr))
+    return max(lincorr, key=abs), lincorr.index(max(lincorr, key=abs))
 
 
 class LinearCorrelation(Method):

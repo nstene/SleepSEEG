@@ -213,8 +213,9 @@ of the brain.
     lag k and Y is nonlagged signal, cov is the covariance and std is the 
     standard deviation. 
   
-  - From all time-lagged values, only the maximum value with its time-lag 
-    koeficient are returned.
+  - From all time-lagged values, the real vaule of the greatest corr value and 
+    its lag index is returned. Negative corr values are evaluated in its 
+    absolute value, but retuned as negative.
 
   - Example
 
@@ -356,7 +357,25 @@ of the brain.
       On y-axis are values of sin, x-axis represents koeficients of the values.
       The correlation of opposite signals is -1.
 
+    .. code-block:: py
+      :name: LinCorr-example2.2.5
 
+      #Example5
+      lag = 10
+      y1 = np.sin(x1)
+      y2 = np.cos(x1)
+      sig = np.array([y1,y2])
+        >>-1.0 0 #np.max(lincorr), lincorr.index(max(lincorr))
+      # The opposite signals have linear correlation equal -1
+
+    .. figure:: images/2.2.5Example.gif
+      :name: Fig2.2.5
+
+    .. The duration of each image in gif  is 1000ms and loop is set to 1000
+
+      To create this graph, two opposite siganls form Example4 were used. 
+      On y-axis are values of sin, x-axis represents koeficients of the values.
+      The correlation of opposite signals is -1.
 
 .. questions
   lag < 0 ? https://stackoverflow.com/questions/509211/how-slicing-in-python-works
@@ -408,9 +427,9 @@ of the brain.
     transform is calculated by scipy.signal library.
 
   - The Fast Fourier Transform (fft) approach is used, because on big dataset
-    it is proved to be significantly faster, than computing convolution by
-    definition. However, for datasets with :math:`samples < 500` this method
-    is less efective than computing by convolution definition.
+    as a neural signals it is proved to be significantly faster, than computing 
+    convolution by definition. However, for datasets with :math:`samples < 500` 
+    this method is less efective than computing by convolution definition.
   
   - The Spectra multiplication mean (SM_mean) varies in the interval 
     :math:`<0,inf)`.
