@@ -269,7 +269,7 @@ of the brain.
 
       #Example1
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1   
-        >>1.0 13 #np.max(lincorr), lincorr.index(max(lincorr))
+        >>1.0 13 #max(lincorr), lincorr.index(max(lincorr))
       #In this case lincorr[3] = 0.9999999999999999 due to rounding error
 
     .. figure:: images/2.2.1Example.gif
@@ -295,7 +295,7 @@ of the brain.
       y1=np.sin(x1)+1
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1  
-        >>1.0 13 #np.max(lincorr), lincorr.index(max(lincorr))
+        >>1.0 13 #max(lincorr), lincorr.index(max(lincorr))
       # Linear correlation is independent to scalar adition
 
     .. figure:: images/2.2.2Example.gif
@@ -321,7 +321,7 @@ of the brain.
       y1=10*np.sin(x1)+1
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1  
-        >>1.0 3 #np.max(lincorr), lincorr.index(max(lincorr))
+        >>1.0 3 #max(lincorr), lincorr.index(max(lincorr))
       # also lincorr[13] = 1, the program returns first highest value
 
     .. figure:: images/2.2.3Example.gif
@@ -347,7 +347,8 @@ of the brain.
       lag = 0
       y1 = np.sin(x1)
       sig = np.array([y1,-y1])
-        >>-1.0 0 #np.max(lincorr), lincorr.index(max(lincorr))
+      compute_lincorr(sig, lag, lag_step) # lag=0, lag_step=1 
+        >>-1.0 0 #max(lincorr), lincorr.index(max(lincorr))
       # The opposite signals have linear correlation equal -1
 
     .. figure:: images/2.2.4Example.png
@@ -365,8 +366,10 @@ of the brain.
       y1 = np.sin(x1)
       y2 = np.cos(x1)
       sig = np.array([y1,y2])
-        >>-1.0 0 #np.max(lincorr), lincorr.index(max(lincorr))
-      # The opposite signals have linear correlation equal -1
+      compute_lincorr(sig, lag, lag_step) # lag=10, lag_step=1 
+        >>-0.946761134320959 13 #max(lincorr), lincorr.index(max(lincorr))
+      # If corr value is negative, method take its absolute value and if it is 
+      # the maximal value, than method return value is negative.
 
     .. figure:: images/2.2.5Example.gif
       :name: Fig2.2.5
@@ -375,7 +378,8 @@ of the brain.
 
       To create this graph, two opposite siganls form Example4 were used. 
       On y-axis are values of sin, x-axis represents koeficients of the values.
-      The correlation of opposite signals is -1.
+      If the signal have negative correlation, method take its absolute value 
+      and if it is the maximal value, than method return value is negative.
 
 .. questions
   lag < 0 ? https://stackoverflow.com/questions/509211/how-slicing-in-python-works
