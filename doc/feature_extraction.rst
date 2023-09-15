@@ -410,13 +410,26 @@ of the brain.
 
 - Relative entropy
 
-  To evaluate the randomness and spectral richness between two time-series, the Kullback-Leibler divergence, i.e. relative entropy (REN), is calculated. 
-  REN is a measure of how entropy of one signal diverges from a second, expected one. The value of REN varies in interval <0,+Inf>. 
-  REN=0 indicates the equality of  statistical distributions of two signals, while REN>0 indicates that the two signals are carrying different information. 
-  REN is calculated between signals X, Y as REN=sum[pX・log(pX/pY)], where pX is a probability distribution of investigated signal and pY is a probability distributions of expected signal. 
-  Because of asymmetrical properties of REN, REN(X, Y) is not equal to REN(Y, X). 
-  REN is calculated in two steps for both directions (both distributions from channel pair were used as expected distributions). 
-  The maximum value of REN is then considered as the final result, regardless of direction.
+  - To evaluate the randomness and spectral richness between two time-series, 
+    the Kullback-Leibler divergence, i.e. relative entropy (REN), is calculated.     
+    REN is a measure of how entropy of one signal diverges from a second, 
+    expected one. 
+    
+  - REN of signals X, Y  is calculated as :math:`REN(X,Y)=sum[pX・log(pX/pY)]`,
+    where pX is a probability distribution of investigated signal, pY is a 
+    probability distributions of expected signal and log is natural logarithm.
+
+    To calculate propability distribution the each signal is devided to 10
+    equidistant bins by numpy histogram method.
+
+  - The important note to this is, that relative entropy is not 
+    metric, because it is not symetric (REN(X, Y) is not equal to REN(Y, X)) 
+    and does not satisfy the triangular inequality.
+    However the value of REN varies in interval :math:`<0,+Inf>` and :math:`REN=0` 
+    indicates the equality of  statistical distributions of two signals, 
+    while REN>0 indicates that the two signals are carrying different information. 
+   
+  - The directional properties in epileptic signals need to be explored.
 
 - Spectra multiplication
 
@@ -507,7 +520,7 @@ of the brain.
                                           #np.mean(sig_sm), np.std(max(sig_sm))
 
     # The two signals should have relativly high SM_mean value even if they are 
-    # phase independent. Than they have also significantly higher SM_std values 
+    # phase independent. Then they have also significantly higher SM_std values 
 
   .. code-block:: py
     :name: LinCorr-example2.7.5
