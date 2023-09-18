@@ -401,10 +401,84 @@ of the brain.
 
 - Phase synchrony
 
-  Phase synchrony (PS) varies in interval <0,1> and reflects synchrony in phase between two signals. 
-  PS is calculated as PS=√[(<cos(ΦXt)>)^2+(<sin(ΦYt)>)^2], where ΦXt is instantaneous phase of signal X, ΦYt is instantaneous phase of signal Y, <> stands for mean and √ for square root. 
-  Instantaneous phase ΦXt is calculated as ΦXt=arctan(xH/xt), where xH is the Hilbert transformation of the time signal xt.
+  - Phase synchrony (PS) varies in interval :math:`(0,1>` and reflects synchrony 
+    in phase between two signals.
 
+  - PS is calculated as :math:`PS=√[(<cos(ΦZt)>)^2+(<sin(ΦZt)>)^2]`, where ΦZt 
+    is instantaneous phase difference of signal ΦXt and ΦYt :math:`ΦZt=ΦXt-ΦYt`,
+    <> stands for mean and √ for square root. 
+    Instantaneous phase ΦXt is calculated as :math:`ΦXt=arctan(xH/xt)`, where 
+    xH is the Hilbert transformation of the time signal xt.
+
+  - The :math:`PS = 1` indicates constant phase difference :math:`ΦZt` by 
+    famous equation :math:`(cos(ΦZt))^2+(sin(ΦZt))^2 = 1`. With bigger number 
+    of miscellaneous phase differences the PS decreses, but usually after big 
+    enough number of data starts to have convergence character.
+
+    The :math:`PS -> 0` indicates the big diversity in signal frequency.
+
+  - Examples
+    .. code-block:: py
+      :name: LinCorr-example2.5.1
+
+      #Example1
+      x1=np.linspace(0.0, 8*np.pi, num=4001)
+
+      y1=np.sin(x1)
+      y2=np.cos(x1)
+      sig = np.array([y1,y2])
+      compute_phase_sync(sig)
+
+        >>0.9999999003538571          #PS value
+
+      # Two signals with same phase have PS value close to 1
+
+    .. code-block:: py
+      :name: LinCorr-example2.5.2
+
+      #Example2
+      x1=np.linspace(0.0, 8*np.pi, num=4001)
+
+      y1=np.sin(2*x1)
+      y2=np.cos(2*x1)
+      sig = np.array([y1,y2])
+      compute_phase_sync(sig)
+
+        >>0.9999997868133397         #PS value
+
+      # Two signals with same phase have PS value close to 1
+
+    .. code-block:: py
+      :name: LinCorr-example2.5.3
+
+      #Example3
+      x1=np.linspace(0.0, 8*np.pi, num=4001)
+
+      y1=np.sin(1.1*x1)
+      y2=np.cos(x1)
+      sig = np.array([y1,y2])
+      compute_phase_sync(sig)
+
+        >>0.7908266399758462         #PS value
+
+      # Two signals with similar phase have PS high PS value, but not that close
+      # to 1, as same signals
+
+    .. code-block:: py
+      :name: LinCorr-example2.5.4
+
+      #Example4
+      x1=np.linspace(0.0, 8*np.pi, num=4001)
+
+      y1=np.sin(2*x1)
+      y2=np.cos(x1)   
+      sig = np.array([y1,y2])
+      compute_phase_sync(sig)
+
+        >>0.00025832361592383534     #PS value
+
+      # Two signals with different phase have PS value near 1
+  
 .. questgion
   why unwrap?
 
@@ -443,74 +517,75 @@ of the brain.
    
   - The directional properties in epileptic signals need to be further explored.
 
-  .. code-block:: py
-    :name: LinCorr-example2.6.1
+  - Examples
+    .. code-block:: py
+      :name: LinCorr-example2.6.1
 
-    #Example1
-    x1=np.linspace(0.0, 8*np.pi, num=4001)
+      #Example1
+      x1=np.linspace(0.0, 8*np.pi, num=4001)
 
-    y1=np.sin(x1)
-    y2=np.cos(x1)
-    sig = np.array([y1,y2])
-    compute_relative_entropy(sig)
+      y1=np.sin(x1)
+      y2=np.cos(x1)
+      sig = np.array([y1,y2])
+      compute_relative_entropy(sig)
 
-      >>6.323111682295058e-07           #REN  
+        >>6.323111682295058e-07           #REN  
 
-    # 2 different singals should not have relative entropy equal zero
-    # 2 similar signals shoul have relativly low relative entropy value  
-    
-  .. code-block:: py
-    :name: LinCorr-example2.6.2
+      # Two different singals should not have relative entropy equal zero
+      # Two similar signals shoul have relativly low relative entropy value  
+      
+    .. code-block:: py
+      :name: LinCorr-example2.6.2
 
-    #Example2
-    x1=np.linspace(0.0, 8*np.pi, num=4001)
+      #Example2
+      x1=np.linspace(0.0, 8*np.pi, num=4001)
 
-    y1=np.sin(x1)
-    y2=np.exp(x1)
-    sig = np.array([y1,y2])
-    compute_relative_entropy(sig)
+      y1=np.sin(x1)
+      y2=np.exp(x1)
+      sig = np.array([y1,y2])
+      compute_relative_entropy(sig)
 
-      >>1.7129570917945496              #REN
+        >>1.7129570917945496              #REN
 
-    sig = np.array([y2,y1])
-    compute_relative_entropy(sig)
+      sig = np.array([y2,y1])
+      compute_relative_entropy(sig)
 
-      >>1.182381303654846               #REN
-    
+        >>1.182381303654846               #REN
+      
 
-    # Relative entropy depends on order of signals as are inserted
+      # Relative entropy depends on order of signals as are inserted
 
-  .. code-block:: py
-    :name: LinCorr-example2.6.3
+    .. code-block:: py
+      :name: LinCorr-example2.6.3
 
-    #Example3
-    x1=np.linspace(0.0, 8*np.pi, num=4001)
+      #Example3
+      x1=np.linspace(0.0, 8*np.pi, num=4001)
 
-    y1=np.sin(x1)
-    y2=np.cos(x1*0))
-    sig = np.array([y1,y2])
-    # np.histogram(sig[0], 10): 
-    #         [820, 360, 296, 264, 261,  260, 264, 296, 360, 820]
-    # np.histogram(sig[1], 10): 
-    #         [  0,   0,   0,   0,   0, 4001,   0,   0,   0,   0]
+      y1=np.sin(x1)
+      y2=np.cos(x1*0))
+      sig = np.array([y1,y2])
+      # np.histogram(sig[0], 10): 
+      #         [820, 360, 296, 264, 261,  260, 264, 296, 360, 820]
+      # np.histogram(sig[1], 10): 
+      #         [  0,   0,   0,   0,   0, 4001,   0,   0,   0,   0]
 
-    compute_relative_entropy(sig)
+      compute_relative_entropy(sig)
 
-      >>nan                           #REN
+        >>nan                           #REN
 
-    # 2 different singals should not have relative entropy equal zero
-    # if the signal sig[1] have one (or more) of the bin probability equal 0
-    # the REL = np.inf
+      # Two different singals should not have relative entropy equal zero
+      # if the signal sig[1] have one (or more) of the bin probability equal 0
+      # the REL = np.inf
 
-    sig = np.array([y2,y1])
-    compute_relative_entropy(sig)
+      sig = np.array([y2,y1])
+      compute_relative_entropy(sig)
 
-      >>2.7336179778417073            #REN
+        >>2.7336179778417073            #REN
 
-    # 2 different singals should not have relative entropy equal zero
-    # if the signal sig[0] have one (or more) of the bin probability equal 0
-    # and the sig[1] have all bins with non-zero probability, program returns
-    # finite value
+      # Two different singals should not have relative entropy equal zero
+      # if the signal sig[0] have one (or more) of the bin probability equal 0
+      # and the sig[1] have all bins with non-zero probability, program returns
+      # finite value
 
 - Spectra multiplication
 
