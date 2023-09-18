@@ -271,9 +271,9 @@ def detect_spikes_janca(sig, fs=None,
 
         obvious_M = markers_high
 
-        out_dtype = [('pos', 'float32'),  # spike position
+        out_dtype = [('event_peak', 'float32'),  # spike position
                      # ('dur', 'float32'),  # spike duration - fix value 5 ms
-                     ('con', 'float32'),  # spike condition
+                     ('condition', 'float32'),  # spike condition
                      # ('weight', 'float32'),  # spike weight "CDF"
                      # ('pdf', 'float32')  # spike probability "PDF"
                      ]
@@ -286,9 +286,9 @@ def detect_spikes_janca(sig, fs=None,
 
             sub_out = np.empty(len(idx), dtype=out_dtype)
 
-            sub_out["pos"] = idx/fs
+            sub_out["event_peak"] = idx/fs
             # sub_out["dur"] = t_dur*np.ones((len(idx)))
-            sub_out["con"] = np.ones((len(idx)))
+            sub_out["condition"] = np.ones((len(idx)))
             # sub_out["weight"] = envelope_cdf[idx]
             # sub_out["pdf"] = envelope_pdf[idx]
 
@@ -309,9 +309,9 @@ def detect_spikes_janca(sig, fs=None,
                     if np.any(obvious_M[np.arange(round(idx[i]-0.01*fs),
                                                   round(idx[i]+0.01*fs))]):
 
-                        amby_out["pos"] = idx[i]/fs
+                        amby_out["event_peak"] = idx[i]/fs
                         # amby_out["dur"] = t_dur
-                        amby_out["con"] = 0.5
+                        amby_out["condition"] = 0.5
                         # amby_out["weight"] = envelope_cdf[idx[i]]
                         # amby_out["pdf"] = envelope_pdf[idx[i]]
 
@@ -319,10 +319,11 @@ def detect_spikes_janca(sig, fs=None,
 
         # making M stack pointer of events
         M = np.zeros(len(d))
-        for k in range(0, len(sub_out["pos"])):
-            pom = np.arange(round(sub_out["pos"][k]*fs),
-                            round(sub_out["pos"][k]*fs+discharge_tol*fs)+1, 1)
-            M[pom] = sub_out["con"][k]
+        for k in range(0, len(sub_out["event_peak"])):
+            pom = np.arange(
+                round(sub_out["event_peak"][k]*fs),
+                round(sub_out["event_peak"][k]*fs+discharge_tol*fs)+1, 1)
+            M[pom] = sub_out["condition"][k]
 
         pom1 = np.concatenate((np.array([False]), M > 0))
         pom2 = np.concatenate((M > 0, np.array([False])))
@@ -331,14 +332,15 @@ def detect_spikes_janca(sig, fs=None,
         point = np.vstack((point1.T, point2.T)).T
         point[:, 1] += 1
 
-        discharges_dtype = [# ('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
-                            ('MA', 'float32'),  # max. amplitude of envelope
-                            ('MP', 'float32'),  # event start position
-                            ('MD', 'float32'),  # event duration
-                            # ('MW', 'float32'),  # statistical weight
-                            # ('MPDF', 'float32'),  # statistical weight
-                            ('MRAW', 'float32')  # amplitude of signal
-                            ]
+        discharges_dtype = [
+            #  ('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
+            ('max_amplitude_env', 'float32'),  # max. amplitude of envelope
+            ('event_start', 'float32'),  # event start position
+            ('event_duration', 'float32'),  # event duration
+            #  ('MW', 'float32'),  # statistical weight
+            #  ('MPDF', 'float32'),  # statistical weight
+            ('max_amplitude', 'float32')  # amplitude of signal
+            ]
 
         sub_discharges = np.zeros(point.shape[0], dtype=discharges_dtype)
         for k in range(0, point.shape[0]):
@@ -367,13 +369,13 @@ def detect_spikes_janca(sig, fs=None,
             row = np.where(pom)[0]
             mp = row[-1] + point[k, 0]
 
-            sub_discharges["MRAW"][k] = mraw
+            sub_discharges["max_amplitude"][k] = mraw
             # sub_discharges["MV"][k] = mv
-            sub_discharges["MA"][k] = ma
+            sub_discharges["max_amplitude_env"][k] = ma
             # sub_discharges["MW"][k] = mw
             # sub_discharges["MPDF"][k] = mpdf
-            sub_discharges["MD"][k] = (point[k, 1]-point[k, 0]-1)/fs
-            sub_discharges["MP"][k] = mp/fs
+            sub_discharges["event_duration"][k] = (point[k, 1]-point[k, 0]-1)/fs
+            sub_discharges["event_start"][k] = mp/fs
 
         # conecting of subsections ----------------
 
@@ -398,11 +400,11 @@ def detect_spikes_janca(sig, fs=None,
     out = np.concatenate(out_list)
 
     # Convert seconds to samples
-    out["pos"] *= orig_fs
-    out["MD"] *= orig_fs
-    out["MP"] *= orig_fs
+    out["event_peak"] *= orig_fs
+    out["event_duration"] *= orig_fs
+    out["event_start"] *= orig_fs
 
-    return list(out)  # discharges
+    return out[['event_peak', 'max_amplitude_env', 'max_amplitude']].tolist()
 
 
 def _local_maxima_detection(envelope, prah_int, fs, polyspike_union_time):
@@ -539,18 +541,18 @@ class JancaDetector(Method):
     algorithm_type = 'event'
     version = '1.0.0'
 
-    dtype = [('pos', 'float32'),  # spike position
+    dtype = [('event_peak', 'float32'),  # spike position
              # ('dur', 'float32'),  # spike duration - fix value 5 ms
-             ('con', 'float32'),  # spike condition
+             # ('condition', 'float32'),  # spike condition
              # ('weight', 'float32'),  # spike weight "CDF"
              # ('pdf', 'float32'),  # spike probability "PDF"
              # ('MV', 'float32'),  # type 1-obvious,0.5- ambiguous
-             ('MA', 'float32'),  # max. amplitude of envelope
-             ('MP', 'float32'),  # event start position
-             ('MD', 'float32'),  # event duration
+             ('max_amplitude_env', 'float32'),  # max. amplitude of envelope
+             # ('event_start', 'float32'),  # event start position
+             # ('event_duration', 'float32'),  # event duration
              # ('MW', 'float32'),  # statistical weight
              # ('MPDF', 'float32'),  # statistical weight
-             ('MRAW', 'float32')]
+             ('max_amplitude', 'float32')]
 
     def __init__(self, **kwargs):
         """
