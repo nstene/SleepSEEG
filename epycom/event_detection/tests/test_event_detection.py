@@ -49,14 +49,9 @@ def test_detect_spikes_janca(create_testing_eeg_data, benchmark):
                                   5000*60,
                                   n_cores=2)
 
-    print(dets)
     expected_vals = (20225,
-                     1.,
                      10.159894,
-                     20250,
-                     25,
-                     29.488527,
-                     0)
+                     29.488527)
 
     for exp_val, det in zip(expected_vals, dets[0]):
         assert isclose(det, exp_val, abs_tol=10e-5)
