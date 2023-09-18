@@ -415,21 +415,70 @@ of the brain.
     REN is a measure of how entropy of one signal diverges from a second, 
     expected one. 
     
-  - REN of signals X, Y  is calculated as :math:`REN(X,Y)=sum[pX・log(pX/pY)]`,
+  - REN of signals X, Y  is calculated as :math:`REN(X,Y)=sum[pX_i・log(pX_i/pY_i)]`,
     where pX is a probability distribution of investigated signal, pY is a 
     probability distributions of expected signal and log is natural logarithm.
 
-    To calculate propability distribution the each signal is devided to 10
-    equidistant bins by numpy histogram method.
+  - To calculate propability distribution the each signal is devided to 10
+    separete equidistant bins by numpy histogram method.
+    For example pX_0 is percentage of values in the lowest :math:`10 %`, band
+    of signal X.
+    The bands for the 2 signals does not have to be the same.
+    For consistency of data the numer of bins is fixed and should not be changed
+    as parametr of function.
 
   - The important note to this is, that relative entropy is not 
     metric, because it is not symetric (REN(X, Y) is not equal to REN(Y, X)) 
     and does not satisfy the triangular inequality.
-    However the value of REN varies in interval :math:`<0,+Inf>` and :math:`REN=0` 
+    The value of REN varies in interval :math:`<0,+Inf)` and :math:`REN=0` 
     indicates the equality of  statistical distributions of two signals, 
-    while REN>0 indicates that the two signals are carrying different information. 
+    while :math:`REN>0` indicates that the two signals are carrying different 
+    information. 
+
+    If the value of entropy equals :math:`REN=inf`, program returns np.nan.
+    :math:`REN=inf` indicates, the signal Y have too low sampling frequency or 
+    signal Y is not satisfyingly continuous or signal Y is corrupted. 
+    :math:`REN=inf` is caused by signal Y having one of the bins empty 
+    (probability of pY_i = 0).
    
-  - The directional properties in epileptic signals need to be explored.
+  - The directional properties in epileptic signals need to be further explored.
+
+  .. code-block:: py
+    :name: LinCorr-example2.6.1
+
+    #Example2
+    x1=np.linspace(0.0, 8*np.pi, num=4001)
+
+    y1=np.sin(x1)
+    y2=np.cos(x1)
+    sig = np.array([y1,y2])
+    compute_relative_entropy(sig)
+
+      >>6.323111682295058e-07           #np.mean(sig_sm), np.std(max(sig_sm))   
+
+    # 2 different singals should not have relative entropy equal zero
+    # 2 similar signals shoul have relativly low relative entropy value  
+    
+  .. code-block:: py
+    :name: LinCorr-example2.6.2
+
+    #Example2
+    x1=np.linspace(0.0, 8*np.pi, num=4001)
+
+    y1=np.sin(x1)
+    y2=np.exp(x1)
+    sig = np.array([y1,y2])
+    compute_relative_entropy(sig)
+
+      >>1.7129570917945496              #np.mean(sig_sm), np.std(max(sig_sm))
+
+    sig = np.array([y2,y1])
+    compute_relative_entropy(sig)
+
+      >>1.182381303654846               #np.mean(sig_sm), np.std(max(sig_sm))
+    
+
+    # Relative entropy depends on order of signals as are inserted
 
 - Spectra multiplication
 
