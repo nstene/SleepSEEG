@@ -437,16 +437,16 @@ of the brain.
 
     If the value of entropy equals :math:`REN=inf`, program returns np.nan.
     :math:`REN=inf` indicates, the signal Y have too low sampling frequency or 
-    signal Y is not satisfyingly continuous or signal Y is corrupted. 
-    :math:`REN=inf` is caused by signal Y having one of the bins empty 
-    (probability of pY_i = 0).
+    one of the signal is sacionar or signal Y is not satisfyingly continuous or
+    signal Y is corrupted. :math:`REN=inf` is caused by signal Y having one of 
+    the bins empty (probability of pY_i = 0).
    
   - The directional properties in epileptic signals need to be further explored.
 
   .. code-block:: py
     :name: LinCorr-example2.6.1
 
-    #Example2
+    #Example1
     x1=np.linspace(0.0, 8*np.pi, num=4001)
 
     y1=np.sin(x1)
@@ -454,7 +454,7 @@ of the brain.
     sig = np.array([y1,y2])
     compute_relative_entropy(sig)
 
-      >>6.323111682295058e-07           #np.mean(sig_sm), np.std(max(sig_sm))   
+      >>6.323111682295058e-07           #REN  
 
     # 2 different singals should not have relative entropy equal zero
     # 2 similar signals shoul have relativly low relative entropy value  
@@ -470,15 +470,47 @@ of the brain.
     sig = np.array([y1,y2])
     compute_relative_entropy(sig)
 
-      >>1.7129570917945496              #np.mean(sig_sm), np.std(max(sig_sm))
+      >>1.7129570917945496              #REN
 
     sig = np.array([y2,y1])
     compute_relative_entropy(sig)
 
-      >>1.182381303654846               #np.mean(sig_sm), np.std(max(sig_sm))
+      >>1.182381303654846               #REN
     
 
     # Relative entropy depends on order of signals as are inserted
+
+  .. code-block:: py
+    :name: LinCorr-example2.6.3
+
+    #Example3
+    x1=np.linspace(0.0, 8*np.pi, num=4001)
+
+    y1=np.sin(x1)
+    y2=np.cos(x1*0))
+    sig = np.array([y1,y2])
+    # np.histogram(sig[0], 10): 
+    #         [820, 360, 296, 264, 261,  260, 264, 296, 360, 820]
+    # np.histogram(sig[1], 10): 
+    #         [  0,   0,   0,   0,   0, 4001,   0,   0,   0,   0]
+
+    compute_relative_entropy(sig)
+
+      >>nan                           #REN
+
+    # 2 different singals should not have relative entropy equal zero
+    # if the signal sig[1] have one (or more) of the bin probability equal 0
+    # the REL = np.inf
+
+    sig = np.array([y2,y1])
+    compute_relative_entropy(sig)
+
+      >>2.7336179778417073            #REN
+
+    # 2 different singals should not have relative entropy equal zero
+    # if the signal sig[0] have one (or more) of the bin probability equal 0
+    # and the sig[1] have all bins with non-zero probability, program returns
+    # finite value
 
 - Spectra multiplication
 
