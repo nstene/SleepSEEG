@@ -38,10 +38,10 @@ def compute_lincorr(sig, lag=0, lag_step=0):
         max_lincorr = -1:   opposite signals
     k: int
         shift of maximum coherence in samples,
-        value in range <0,2*lag> (int)
-        k<lag: sig[1] -> sig[0]
-        k=lag: no shift in signals
-        k>lag: sig[0] -> sig[1]
+        value in range <-lag,+lag> (int)
+        k > 0: sig[1] -> sig[0]
+        k = 0: no shift in signals
+        k < 0: sig[0] -> sig[1]
 
     Example
     -------
@@ -73,7 +73,7 @@ def compute_lincorr(sig, lag=0, lag_step=0):
         corr_val = np.corrcoef(sig1_wl, sig2_wl)
         lincorr.append(corr_val[0][1])
 
-    return max(lincorr, key=abs), lincorr.index(max(lincorr, key=abs))
+    return max(lincorr, key=abs), lag-(lincorr.index(max(lincorr, key=abs)))*lag_step 
 
 
 class LinearCorrelation(Method):
@@ -82,7 +82,7 @@ class LinearCorrelation(Method):
     algorithm_type = 'bivariate'
     version = '1.0.0'
     dtype = [('max_corr', 'float32'),
-             ('tau', 'float32')]
+             ('k', 'int')]
 
     def __init__(self, **kwargs):
         """
