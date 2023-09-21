@@ -387,10 +387,19 @@ of the brain.
 
 - Phase consistency
 
-  Phase consistency (PC) varies in interval :math:`(0,1>` and reflects conformity in phase between two signals, regardless of any phase shift between them. 
-  First, phase synchrony (PS) is calculated for multiple steps of time delay between two signals as PS=√[(<cos(ΦXt)>)2+(<sin(ΦYt)>)2], where ΦXt is instantaneous phase of signal X, ΦYt is instantaneous phase of signal Y, <> stands for mean and √ for square root. 
-  PC is then calculated as PC = <PS>・(1-std(PS)/0.5), where std is the standard deviation and <・> stands for mean.  
-  Instantaneous phase ΦXt is calculated as ΦXt=arctan(xH/xt), where xH is the Hilbert transformation of the time signal xt.
+  - Phase consistency (PC) varies in interval :math:`(0,1>` and reflects 
+    conformity in phase between two signals, regardless of any phase shift 
+    between them. 
+
+  - First, phase synchrony (PS) is calculated as 
+    :math:`PS=√[(<cos(ΦZt)>)^2+(<sin(ΦZt)>)^2]`, where ΦZt is instantaneous 
+    phase difference of signal ΦXt and ΦYt :math:`ΦZt=ΦXt-ΦYt`, <> stands for 
+    mean and √ for square root. Instantaneous phase ΦXt is calculated as 
+    :math:`ΦXt=arctan(xH/xt)`, where xH is the Hilbert transformation of the 
+    time signal xt.
+
+  - PC is then calculated as PC = <PS>・(1-std(PS)/0.5), where std is the 
+    standard deviation and <・> stands for mean.
 
 - Phase lag index
 
@@ -475,7 +484,7 @@ of the brain.
       sig = np.array([y1,y2])
       compute_pli(sig, lag, lag_step)       # lag = 50, lag_step = 5
 
-        >> 0.5328774329300369 -15                         # max_PLI, max_PLI_lag
+        >> 0.5328774329300369 -15            # max_PLI, max_PLI_lag
 
       # Program takes the first biggest value with its time-lag value in samples.
       # Program calculates only the absulute value of PLI
