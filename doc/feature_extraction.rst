@@ -402,9 +402,12 @@ of the brain.
     constant, nonzero phase lag, which is most likely not caused by volume 
     conduction from a single strong source. 
   
-    Phase lag index is calculated as :math:`PLI=|<sign[ΔΦ(tk)]>|`, where sign represents 
-    signum function, <> stands for mean and ΔΦ is a phase difference between two 
-    iEEG signals. 
+    Phase lag index is calculated as :math:`PLI=|<sign[ΔΦ(tk)]>|`, where sign 
+    represents signum function, <・> stands for mean, |・| stands for absolute 
+    value and ΔΦ is a phase difference between two iEEG signals.
+
+  - PLI could be in general also calculaced without absolute value, then the sign 
+    represents direction. This feature does not alow calculation of signed value.
 
   - Maximum time-lag should not exceed fmax/2. The maximum value of PLI is stored 
     with its time-lag value.
@@ -426,14 +429,16 @@ of the brain.
 
         >> 1.0 50                          # max_PLI, max_PLI_lag
 
-      # Two signals with same phase have PS value close to 1
+      # Program takes the first biggest value with its time-lag value in samples
 
     .. figure:: images/2.4.1Example.gif
       :name: Fig2.4.1
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the number of iteration. Gif shows signed values of
+    PLI for better understanding, but this feature counts only with absolute 
+    value of PLI.
 
     .. code-block:: py
       :name: LinCorr-example2.4.2
@@ -448,14 +453,41 @@ of the brain.
 
         >> 1.0 50                           # max_PLI, max_PLI_lag
 
-      # Two signals with same phase have PS value close to 1
+      # Program takes the first biggest value with its time-lag value in samples
 
     .. figure:: images/2.4.2Example.gif
       :name: Fig2.4.2
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the number of iterations. Gif shows signed values of
+    PLI for better understanding, but this feature counts only with absolute 
+    value of PLI.
+
+    .. code-block:: py
+      :name: LinCorr-example2.4.3
+
+      #Example3
+      x1=np.linspace(6*np.pi, 16*np.pi, num=2001)
+
+      y1=np.cos(x1)
+      y2=np.cos(10000/(x1*x1)-4)
+      sig = np.array([y1,y2])
+      compute_pli(sig, lag, lag_step)       # lag = 50, lag_step = 5
+
+        >> 0.5328774329300369 -15                         # max_PLI, max_PLI_lag
+
+      # Program takes the first biggest value with its time-lag value in samples.
+      # Program calculates only the absulute value of PLI
+
+    .. figure:: images/2.4.3Example.gif
+      :name: Fig2.4.3
+
+    This gif shows, how does program go through the data with lag = 50 and 
+    compute signes PLI between them. The y(n_i) represents n_i_th value of 
+    signal, 'i' stands for the number of iterations. Gif shows signed values of
+    PLI for better understanding, but this feature counts only with absolute 
+    value of PLI.
 
 - Phase synchrony
 
