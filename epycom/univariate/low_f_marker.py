@@ -69,3 +69,4 @@ class LowFreqMarker(Method):
         """
 
         super().__init__(compute_low_f_marker, **kwargs)
+        

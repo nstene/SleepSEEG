@@ -32,10 +32,46 @@ Univariate feature extraction
 ..
   TODO
 
-- Low f maker
+- Low frequency marker
 
-..
-  TODO
+  - The Low frequency marker (LFM) varies in the interval :math:`<0,inf)` and 
+    reflects power ratio between two signal bands.
+    frequency similarities between two signals.
+    :math:`Coh=1` indicates, the one signal is directly influenced by the 
+    second signal, :math:`Coh=0` indicates no influence by second signal.
+
+  - The LFM is calculated as :math:`LFM = median((infra_sig^2)/(main_sig^2))`, 
+    where infra signal is signal in lowband frequencies and main signal is 
+    signal in highband frequencies. Both infra and main signals are isolated 
+    from the input signal by Butterworth filter and '/' is division element-wise.
+      
+  - The infra frequency varies :math:`lowband=<0.02, 0.5>` Hz and the main 
+    signal varies in :math:`highband=<2.0, 4.0>` Hz and cannot be changed in 
+    input. The interval boundaries was identified based on:
+
+    LUNDSTROM, Brian Nils; BRINKMANN, Benjamin a WORRELL, Gregory. Low frequency 
+    interictal EEG biomarker for localizing seizures. Online. MedRxiv. June 7, 
+    2021, , pages 1-20. Avaiable from: 
+    https://doi.org/https://doi.org/10.1101/2021.06.04.21258382. 
+    [cit. 2023-09-26].
+
+    Although, some changes of infra and main frequencies could be reached by 
+    changing of sampling fraquency value, it is not recomended.
+
+  - Example
+  
+    .. code-block:: py
+      :name: Coh-example1.3.1
+
+      x1=np.linspace(0*np.pi, 8*np.pi, num=2001)
+      sig=np.sin(x1)
+      fs = 5000
+      compute_low_f_marker(sig, fs)
+        >> 0.0922391697746599
+      # 
+
+    .. figure:: images/1.3.1Example.png
+      :name: Fig1.3.1
 
 - Lyapunov exponent
 
@@ -578,9 +614,6 @@ of the brain.
 
       # Two signals with different phase have PS value near 1
   
-.. questgion
-  why unwrap?
-
 - Relative entropy
 
   - To evaluate the randomness and spectral richness between two time-series, 
