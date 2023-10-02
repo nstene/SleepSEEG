@@ -18,7 +18,7 @@ def compute_relative_entropy(sig):
     """
     Calculation of Kullback-Leibler divergence:
     relative entropy of sig[0] with respect to sig[1]
-    and relative entropy of sig[1] with respect to sig[0]
+    (not the same as relative entropy of sig[1] with respect to sig[0])
 
     Parameters
     ----------
@@ -63,7 +63,7 @@ class RelativeEntropy(Method):
     def __init__(self, **kwargs):
         """
         Calculation of Kullback-Leibler divergence:
-        relative entropy of sig1 with respect to sig2
+        relative entropy of sig[0] with respect to sig[1]
         """
 
         super().__init__(compute_relative_entropy, **kwargs)

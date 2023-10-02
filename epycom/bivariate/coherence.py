@@ -50,10 +50,10 @@ def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
         maximum coherence in shift
     k: int
         shift of maximum coherence in samples,
-        value in range <0,2*lag> (int)
-        k<lag: sig[1] -> sig[0]
-        k=lag: no shift in signals
-        k>lag: sig[0] -> sig[1]
+        value in range <-lag,+lag> (int)
+        k > 0: sig[1] -> sig[0]
+        k = 0: no shift in signals
+        k < 0: sig[0] -> sig[1]
 
     Example
     -------
@@ -92,7 +92,7 @@ def compute_coherence(sig, fs=5000, fband=[1.0, 4.0], lag=0, lag_step=0,
         f, coh = coherence(sig1_wl, sig2_wl, fs, nperseg=fft_win)
         coh_win.append(np.mean(coh[fc1:fc2]))
 
-    return np.max(coh_win), coh_win.index(max(coh_win))
+    return np.max(coh_win), lag-(coh_win.index(max(coh_win)))*lag_step 
 
 
 class Coherence(Method):
@@ -101,7 +101,7 @@ class Coherence(Method):
     algorithm_type = 'bivariate'
     version = '1.0.0'
     dtype = [('max_coh', 'float32'),
-             ('tau', 'float32')]
+             ('k', 'int')]
 
 
     def __init__(self, **kwargs):
