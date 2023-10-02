@@ -36,14 +36,11 @@ Univariate feature extraction
 
   - The Low frequency marker (LFM) varies in the interval :math:`<0,inf)` and 
     reflects power ratio between two signal bands.
-    frequency similarities between two signals.
-    :math:`Coh=1` indicates, the one signal is directly influenced by the 
-    second signal, :math:`Coh=0` indicates no influence by second signal.
 
   - The LFM is calculated as :math:`LFM = median((infra_sig^2)/(main_sig^2))`, 
     where infra signal is signal in lowband frequencies and main signal is 
     signal in highband frequencies. Both infra and main signals are isolated 
-    from the input signal by Butterworth filter and '/' is division element-wise.
+    from the input signal by Butterworth filter. The '/' is division element-wise.
       
   - The infra frequency varies :math:`lowband=<0.02, 0.5>` Hz and the main 
     signal varies in :math:`highband=<2.0, 4.0>` Hz and cannot be changed in 
@@ -58,20 +55,98 @@ Univariate feature extraction
     Although, some changes of infra and main frequencies could be reached by 
     changing of sampling fraquency value, it is not recomended.
 
+  - Importance of using median insted of mean is, the main signal often croses
+    zero value, so mean would be affected by multiple significantly higher
+    values.
+
   - Example
   
     .. code-block:: py
       :name: Coh-example1.3.1
 
+      #Example1
       x1=np.linspace(0*np.pi, 8*np.pi, num=2001)
       sig=np.sin(x1)
       fs = 5000
       compute_low_f_marker(sig, fs)
         >> 0.0922391697746599
-      # 
+
+    .. figure:: images/1.3.1aExample.png
+      :name: Fig1.3.1a
 
     .. figure:: images/1.3.1Example.png
       :name: Fig1.3.1
+
+    The median in this example is relativly low, but similar signal obtained 
+    with different sampling frequency could lead to very different result.
+    As you can see in the next example:
+
+    .. code-block:: py
+      :name: Coh-example1.3.2
+
+      #Example2
+      x1=np.linspace(0*np.pi, 8*np.pi, num=2001)
+      sig=np.sin(x1)
+      fs = 500
+      # the sampling frequency in this case is 10 times lower than in example
+      # above, but the samples stays the same
+      compute_low_f_marker(sig, fs)
+        >> 49.2645621029126
+
+    .. figure:: images/1.3.2Example.png
+      :name: Fig1.3.2
+
+    In the practical case, the result is not much affected by different, but 
+    large enough sampling frequency, because a higher sampling frequency only 
+    leads to a higher sample density:
+
+    .. code-block:: py
+      :name: Coh-example1.3.3
+
+      #Example3
+      x1=np.linspace(0*np.pi, 8*np.pi, num=4001)
+      sig=np.sin(x1)
+      fs = 1000
+      # both sampling frequency and sample density are two times bigger than in 
+      # example above
+      compute_low_f_marker(sig, fs)
+        >> 50.077958925986536
+
+    .. figure:: images/1.3.3Example.png
+      :name: Fig1.3.3
+
+    However, it is important to choose proper size of analyzed signal window,
+    otherwise the ressult could be different:
+
+    .. code-block:: py
+      :name: Coh-example1.3.4
+
+      #Example4
+      x1=np.linspace(0*np.pi, 2*np.pi, num=1001)
+      sig=np.sin(x1)
+      fs = 1000
+      compute_low_f_marker(sig, fs)
+        >> 32.024759481499984
+
+    .. figure:: images/1.3.4Example.png
+      :name: Fig1.3.4
+
+    The ressult is not dependent on scaling of signal:
+
+    .. code-block:: py
+      :name: Coh-example1.3.5
+
+      #Example5
+      x1=np.linspace(0*np.pi, 8*np.pi, num=4001)
+      sig= 3 + 7*np.sin(x1)
+      fs = 1000
+      # scaled signal from Example3
+      compute_low_f_marker(sig, fs)
+        >> 50.07795892596946
+
+    .. figure:: images/1.3.5Example.png
+      :name: Fig1.3.5
+   
 
 - Lyapunov exponent
 
