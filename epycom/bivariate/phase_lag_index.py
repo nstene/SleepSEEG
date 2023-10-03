@@ -95,7 +95,7 @@ class PhaseLagIndex(Method):
 
     algorithm = 'PHASE_LAG_INDEX'
     algorithm_type = 'bivariate'
-    version = '1.0.0'
+    version = '2.0.0'
     dtype = [('pli', 'float32'),
              ('k', 'int')]
 
