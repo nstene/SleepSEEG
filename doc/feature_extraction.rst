@@ -509,8 +509,78 @@ of the brain.
     :math:`ΦXt=arctan(xH/xt)`, where xH is the Hilbert transformation of the 
     time signal xt.
 
-  - PC is then calculated as PC = <PS>・(1-std(PS)/0.5), where std is the 
+  - PC is then calculated as :math:`PC = <PS>・(1-2*std(PS))`, where std is the 
     standard deviation and <・> stands for mean.
+
+  - Although this feature is empirical, it has mathematical background.
+    The 3 sigma rule says, for normal distribution 95 % of values are in the 
+    interval :math:`<mean(・)-2*std(・), mean(・)+2*std(・)>`, where the std(・)
+    stands for standart deviation.
+
+    Because all the values of PS lay in the interval :math:`(0,1>` and we 
+    obtain again value from interval :math:`(0,1>`, the 3 sigma rule is 
+    modified with multiplication standart deviation by mean. Then only the
+    lower bound is used.
+
+    In broad strokes, this feature pinpoint the value of PS above which are 
+    95 % of all PS values obtained with inserted phase lag and phase lag step.
+
+    The limitation of this feature is, that data often does not satisfy the 
+    normal distribution. Then the ressult does not have to fullfil this 
+    interpretation, nontheless the result is still usefull.
+
+  - Example
+
+    .. code-block:: py
+      :name: PC-example2.4.1
+
+      #Example1
+      x1=np.linspace(6*np.pi, 16*np.pi, num=4001)
+      y1=np.sin(x1)
+      y2=np.cos(x1)
+
+      sig = np.array([y1,y2])
+      lag = 500
+      lag_step = 1
+      compute_phase_const(sig, lag, lag_step)       
+
+        >> 0.8650275116884527                          
+
+    .. figure:: images/2.3.1Example.png
+      :name: Fig2.3.1
+
+    The histogram is devided to 10 bins to show the distribution of lagged PS
+    values. The orange line represents PC value calculated by this algorithm.
+
+    In previous example are all phase synchrony values near 1 and although they
+    are not normally distributed, PC returns value as they would be naturally 
+    distribudet with same mean and standart deviation.
+
+    .. code-block:: py
+      :name: PC-example2.4.2
+
+      #Example2
+      x1=np.linspace(6*np.pi, 16*np.pi, num=4001)
+      y1=np.sin(x1)
+      y2=np.cos(10000/(x1*x1)-4)
+
+      sig = np.array([y1,y2])
+      lag = 500
+      lag_step = 1
+      compute_phase_const(sig, lag, lag_step)     
+
+        >> 0.35096503373573645                         
+
+    .. figure:: images/2.3.2Example.png
+      :name: Fig2.3.2
+
+    The histogram is devided to 10 bins to show the distribution of lagged PS
+    values. The orange line represents PC value calculated by this algorithm.
+
+    In previous example are all phase synchrony values distributed across the 
+    whole interval and although they are not normally distributed, PC returns 
+    value as they would be naturally distributed with same mean and standart 
+    deviation.
 
 - Phase lag index
 
