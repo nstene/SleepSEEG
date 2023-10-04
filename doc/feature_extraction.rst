@@ -795,6 +795,7 @@ of the brain.
   - The directional properties in epileptic signals need to be further explored.
 
   - Examples
+  
     .. code-block:: py
       :name: LinCorr-example2.6.1
 
