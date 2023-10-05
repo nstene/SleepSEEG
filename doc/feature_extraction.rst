@@ -242,7 +242,7 @@ of the brain.
       # other variables stands same as in example Coh-example2.1.1 above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
         >> 0.9999999999999999 0
-      # the coherence between the opposite signals is 1
+      # the coherence between the same signals is 1
 
     .. figure:: images/2.1.2Example.png
       :name: Fig2.1.2
@@ -254,7 +254,7 @@ of the brain.
       lag = 250
       # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
-        >> 0.9999999999999999 0
+        >> 1.0 0
       # the coherence between the opposite signals is 1
 
     .. figure:: images/2.1.3Example.gif
@@ -262,42 +262,47 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 250 and 
     compute coherence between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the lag (in samples) in the iteration.
 
     .. code-block:: py
       :name: Coh-example2.1.4.1
 
-      y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
+      y2  = np.sin(x1)-np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
       sig = np.array([y1,y2])
       lag = 250
       # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
-        >> 0.6180260559346161 0
-      # the coherence between the opposite signals is 1
+        >> 0.6180260559346161 250
 
     .. figure:: images/2.1.4.1Example.gif
       :name: Fig2.1.4.1
 
     This gif shows, how does program go through the data with lag = 250 and 
     compute coherence between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the lag (in samples) in the iteration.
+
+    Program shows, the maximal  coherence between the signals is, if the first
+    signal is 250 samples ahead.
 
     .. code-block:: py
       :name: Coh-example2.1.4.2
 
-      y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
+      y2=-np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
       sig = np.array([y1,y2])
       lag = 250
       # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
-        >> 0.40572228497072715 70
+        >> 0.40572228497072715 180
 
     .. figure:: images/2.1.4.2Example.gif
       :name: Fig2.1.4.2
 
     This gif shows, how does program go through the data with lag = 250 and 
     compute coherence between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the lag (in samples) in the iteration.
+
+    Program shows, the maximal  coherence between the signals is, if the first
+    signal is 180 samples ahead.
 
     Though neither of two correlations above is significantly large. It may 
     show, how this feature could determine the difference between two signals 
@@ -795,7 +800,7 @@ of the brain.
   - The directional properties in epileptic signals need to be further explored.
 
   - Examples
-  
+
     .. code-block:: py
       :name: LinCorr-example2.6.1
 
