@@ -610,7 +610,7 @@ of the brain.
   - Example
 
     .. code-block:: py
-      :name: LinCorr-example2.4.1
+      :name: PLI-example2.4.1
 
       #Example1
       lag = 50
@@ -631,12 +631,12 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iteration. Gif shows signed values of
+    signal, 'i' stands for the the lag in iteration. Gif shows signed values of
     PLI for better understanding, but this feature counts only with absolute 
     value of PLI.
 
     .. code-block:: py
-      :name: LinCorr-example2.4.2
+      :name: PLI-example2.4.2
 
       #Example2
       x1=np.linspace(0.0, 8*np.pi, num=4001)
@@ -655,12 +655,12 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations. Gif shows signed values of
+    signal, 'i' stands for the the lag in iterations. Gif shows signed values of
     PLI for better understanding, but this feature counts only with absolute 
     value of PLI.
 
     .. code-block:: py
-      :name: LinCorr-example2.4.3
+      :name: PLI-example2.4.3
 
       #Example3
       x1=np.linspace(6*np.pi, 16*np.pi, num=2001)
@@ -680,7 +680,7 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations. Gif shows signed values of
+    signal, 'i' stands for the the lag in iterations. Gif shows signed values of
     PLI for better understanding, but this feature counts only with absolute 
     value of PLI.
 
