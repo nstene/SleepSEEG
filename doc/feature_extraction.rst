@@ -385,8 +385,9 @@ of the brain.
 
       #Example1
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1   
-        >>1.0 13 #max(lincorr), lincorr.index(max(lincorr))
-      #In this case lincorr[3] = 0.9999999999999999 due to rounding error
+        >>-1.0 0
+      #In lag = -5: lincorr = 0.9999999999999999 due to rounding error
+      #In lag = +5: lincorr = 1, but algorithm choose first biggest correlation
 
     .. figure:: images/2.2.1Example.gif
       :name: Fig2.2.1
@@ -396,10 +397,10 @@ of the brain.
       The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
       of iterations. 
 
-      If  :math:`i == lag` , signals are not shiftet
-        | :math:`i < lag` , signal sig[1] is after sig[0].
-        | :math:`i > lag` , signal sig[0] is after sig[1]. 
-      :math:`lag = 8` in this example
+      If  :math:`i == 0` , signals are not shiftet
+        | :math:`i < 0` , signal sig[1] is after sig[0].
+        | :math:`i > 0` , signal sig[0] is after sig[1].
+      :math:`lag = 0` in this example
 
       At the end the lag with greatest correlation is returned.
     .. The duration of each image in gif  is 1000ms and loop is set to 1000
@@ -411,7 +412,7 @@ of the brain.
       y1=np.sin(x1)+1
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1  
-        >>1.0 13 #max(lincorr), lincorr.index(max(lincorr))
+        >>-1.0 0
       # Linear correlation is independent to scalar adition
 
     .. figure:: images/2.2.2Example.gif
@@ -422,12 +423,11 @@ of the brain.
       The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
       of iterations. 
 
-      If  :math:`i == lag` , signals are not shiftet
-        | :math:`i < lag` , signal sig[1] is after sig[0].
-        | :math:`i > lag` , signal sig[0] is after sig[1]. 
-      :math:`lag = 8` in this example
+      If  :math:`i == 0` , signals are not shiftet
+        | :math:`i < 0` , signal sig[1] is after sig[0].
+        | :math:`i > 0` , signal sig[0] is after sig[1].
+      :math:`lag = 0` in this example
 
-      At the end the lag with greatest correlation is returned.
     .. The duration of each image in gif  is 1000ms and loop is set to 1000
 
     .. code-block:: py
@@ -437,7 +437,7 @@ of the brain.
       y1=10*np.sin(x1)+1
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1  
-        >>1.0 3 #max(lincorr), lincorr.index(max(lincorr))
+        >>1.0 5
       # also lincorr[13] = 1, the program returns first highest value
 
     .. figure:: images/2.2.3Example.gif
@@ -448,12 +448,12 @@ of the brain.
       The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
       of iterations. 
 
-      If  :math:`i == lag` , signals are not shiftet
-        | :math:`i < lag` , signal sig[1] is after sig[0].
-        | :math:`i > lag` , signal sig[0] is after sig[1]. 
-      :math:`lag = 8` in this example
+      If  :math:`i == 0` , signals are not shiftet
+        | :math:`i < 0` , signal sig[1] is after sig[0].
+        | :math:`i > 0` , signal sig[0] is after sig[1].
+      :math:`lag = 5` in this example, so sig[0] is ahead sig[1]
 
-      At the end the lag with greatest correlation is returned.
+      At the end the lag with first greatest correlation is returned.
     .. The duration of each image in gif  is 1000ms and loop is set to 1000
 
     .. code-block:: py
@@ -464,7 +464,7 @@ of the brain.
       y1 = np.sin(x1)
       sig = np.array([y1,-y1])
       compute_lincorr(sig, lag, lag_step) # lag=0, lag_step=1 
-        >>-1.0 0 #max(lincorr), lincorr.index(max(lincorr))
+        >>-1.0 0
       # The opposite signals have linear correlation equal -1
 
     .. figure:: images/2.2.4Example.png
@@ -483,9 +483,9 @@ of the brain.
       y2 = np.cos(x1)
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step) # lag=10, lag_step=1 
-        >>-0.946761134320959 13 #max(lincorr), lincorr.index(max(lincorr))
+        >>-0.946761134320959 -3
       # If corr value is negative, method take its absolute value and if it is 
-      # the maximal value, than method return value is negative.
+      # the maximal value, than method return value as negative.
 
     .. figure:: images/2.2.5Example.gif
       :name: Fig2.2.5
