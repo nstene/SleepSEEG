@@ -93,7 +93,9 @@ class Method:
         func_sig = inspect.signature(self._compute_function)
         keys_to_pop = []
         if self._compute_function is not None:
-            for key in self._params.keys():
+            for key, value in self._params.items():
+                if key == 'fs' and not isinstance(value, int):
+                    raise ValueError("fs must be an integer")
                 if key not in func_sig.parameters.keys():
                     warnings.warn(f"Unrecognized keyword argument {key}.\
                                     It will be ignored",
