@@ -32,10 +32,121 @@ Univariate feature extraction
 ..
   TODO
 
-- Low f maker
+- Low frequency marker
 
-..
-  TODO
+  - The Low frequency marker (LFM) varies in the interval :math:`<0,inf)` and 
+    reflects power ratio between two signal bands.
+
+  - The LFM is calculated as :math:`LFM = median((infra_sig^2)/(main_sig^2))`, 
+    where infra signal is signal in lowband frequencies and main signal is 
+    signal in highband frequencies. Both infra and main signals are isolated 
+    from the input signal by Butterworth filter. The '/' is division element-wise.
+      
+  - The infra frequency varies :math:`lowband=<0.02, 0.5>` Hz and the main 
+    signal varies in :math:`highband=<2.0, 4.0>` Hz and cannot be changed in 
+    input. The interval boundaries was identified based on:
+
+    LUNDSTROM, Brian Nils; BRINKMANN, Benjamin a WORRELL, Gregory. Low frequency 
+    interictal EEG biomarker for localizing seizures. Online. MedRxiv. June 7, 
+    2021, , pages 1-20. Avaiable from: 
+    https://doi.org/https://doi.org/10.1101/2021.06.04.21258382. 
+    [cit. 2023-09-26].
+
+    Although, some changes of infra and main frequencies could be reached by 
+    changing of sampling fraquency value, it is not recomended.
+
+  - Importance of using median insted of mean is, the main signal often croses
+    zero value, so mean would be affected by multiple significantly higher
+    values.
+
+  - Example
+  
+    .. code-block:: py
+      :name: Coh-example1.3.1
+
+      #Example1
+      x1=np.linspace(0*np.pi, 8*np.pi, num=2001)
+      sig=np.sin(x1)
+      fs = 5000
+      compute_low_f_marker(sig, fs)
+        >> 0.0922391697746599
+
+    .. figure:: images/1.3.1aExample.png
+      :name: Fig1.3.1a
+
+    .. figure:: images/1.3.1Example.png
+      :name: Fig1.3.1
+
+    The median in this example is relativly low, but similar signal obtained 
+    with different sampling frequency could lead to very different result.
+    As you can see in the next example:
+
+    .. code-block:: py
+      :name: Coh-example1.3.2
+
+      #Example2
+      x1=np.linspace(0*np.pi, 8*np.pi, num=2001)
+      sig=np.sin(x1)
+      fs = 500
+      # the sampling frequency in this case is 10 times lower than in example
+      # above, but the samples stays the same
+      compute_low_f_marker(sig, fs)
+        >> 49.2645621029126
+
+    .. figure:: images/1.3.2Example.png
+      :name: Fig1.3.2
+
+    In the practical case, the result is not much affected by different, but 
+    large enough sampling frequency, because a higher sampling frequency only 
+    leads to a higher sample density:
+
+    .. code-block:: py
+      :name: Coh-example1.3.3
+
+      #Example3
+      x1=np.linspace(0*np.pi, 8*np.pi, num=4001)
+      sig=np.sin(x1)
+      fs = 1000
+      # both sampling frequency and sample density are two times bigger than in 
+      # example above
+      compute_low_f_marker(sig, fs)
+        >> 50.077958925986536
+
+    .. figure:: images/1.3.3Example.png
+      :name: Fig1.3.3
+
+    However, it is important to choose proper size of analyzed signal window,
+    otherwise the ressult could be different:
+
+    .. code-block:: py
+      :name: Coh-example1.3.4
+
+      #Example4
+      x1=np.linspace(0*np.pi, 2*np.pi, num=1001)
+      sig=np.sin(x1)
+      fs = 1000
+      compute_low_f_marker(sig, fs)
+        >> 32.024759481499984
+
+    .. figure:: images/1.3.4Example.png
+      :name: Fig1.3.4
+
+    The ressult is not dependent on scaling of signal:
+
+    .. code-block:: py
+      :name: Coh-example1.3.5
+
+      #Example5
+      x1=np.linspace(0*np.pi, 8*np.pi, num=4001)
+      sig= 3 + 7*np.sin(x1)
+      fs = 1000
+      # scaled signal from Example3
+      compute_low_f_marker(sig, fs)
+        >> 50.07795892596946
+
+    .. figure:: images/1.3.5Example.png
+      :name: Fig1.3.5
+   
 
 - Lyapunov exponent
 
@@ -131,7 +242,7 @@ of the brain.
       # other variables stands same as in example Coh-example2.1.1 above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
         >> 0.9999999999999999 0
-      # the coherence between the opposite signals is 1
+      # the coherence between the same signals is 1
 
     .. figure:: images/2.1.2Example.png
       :name: Fig2.1.2
@@ -143,7 +254,7 @@ of the brain.
       lag = 250
       # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
-        >> 0.9999999999999999 0
+        >> 1.0 0
       # the coherence between the opposite signals is 1
 
     .. figure:: images/2.1.3Example.gif
@@ -151,42 +262,47 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 250 and 
     compute coherence between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the lag (in samples) in the iteration.
 
     .. code-block:: py
       :name: Coh-example2.1.4.1
 
-      y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
+      y2  = np.sin(x1)-np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
       sig = np.array([y1,y2])
       lag = 250
       # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
-        >> 0.6180260559346161 0
-      # the coherence between the opposite signals is 1
+        >> 0.6180260559346161 250
 
     .. figure:: images/2.1.4.1Example.gif
       :name: Fig2.1.4.1
 
     This gif shows, how does program go through the data with lag = 250 and 
     compute coherence between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the lag (in samples) in the iteration.
+
+    Program shows, the maximal  coherence between the signals is, if the first
+    signal is 250 samples ahead.
 
     .. code-block:: py
       :name: Coh-example2.1.4.2
 
-      y2=-1*np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
+      y2=-np.sin(2*x1)+np.sin(3*x1)-np.sin(4*x1)
       sig = np.array([y1,y2])
       lag = 250
       # other variables stands same as in example above
       compute_coherence(sig, fs, fband, lag, lag_step, fft_win)
-        >> 0.40572228497072715 70
+        >> 0.40572228497072715 180
 
     .. figure:: images/2.1.4.2Example.gif
       :name: Fig2.1.4.2
 
     This gif shows, how does program go through the data with lag = 250 and 
     compute coherence between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations.
+    signal, 'i' stands for the lag (in samples) in the iteration.
+
+    Program shows, the maximal  coherence between the signals is, if the first
+    signal is 180 samples ahead.
 
     Though neither of two correlations above is significantly large. It may 
     show, how this feature could determine the difference between two signals 
@@ -269,8 +385,9 @@ of the brain.
 
       #Example1
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1   
-        >>1.0 13 #max(lincorr), lincorr.index(max(lincorr))
-      #In this case lincorr[3] = 0.9999999999999999 due to rounding error
+        >>-1.0 0
+      #In lag = -5: lincorr = 0.9999999999999999 due to rounding error
+      #In lag = +5: lincorr = 1, but algorithm choose first biggest correlation
 
     .. figure:: images/2.2.1Example.gif
       :name: Fig2.2.1
@@ -280,10 +397,10 @@ of the brain.
       The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
       of iterations. 
 
-      If  :math:`i == lag` , signals are not shiftet
-        | :math:`i < lag` , signal sig[1] is after sig[0].
-        | :math:`i > lag` , signal sig[0] is after sig[1]. 
-      :math:`lag = 8` in this example
+      If  :math:`i == 0` , signals are not shiftet
+        | :math:`i < 0` , signal sig[1] is after sig[0].
+        | :math:`i > 0` , signal sig[0] is after sig[1].
+      :math:`lag = 0` in this example
 
       At the end the lag with greatest correlation is returned.
     .. The duration of each image in gif  is 1000ms and loop is set to 1000
@@ -295,7 +412,7 @@ of the brain.
       y1=np.sin(x1)+1
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1  
-        >>1.0 13 #max(lincorr), lincorr.index(max(lincorr))
+        >>-1.0 0
       # Linear correlation is independent to scalar adition
 
     .. figure:: images/2.2.2Example.gif
@@ -306,12 +423,11 @@ of the brain.
       The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
       of iterations. 
 
-      If  :math:`i == lag` , signals are not shiftet
-        | :math:`i < lag` , signal sig[1] is after sig[0].
-        | :math:`i > lag` , signal sig[0] is after sig[1]. 
-      :math:`lag = 8` in this example
+      If  :math:`i == 0` , signals are not shiftet
+        | :math:`i < 0` , signal sig[1] is after sig[0].
+        | :math:`i > 0` , signal sig[0] is after sig[1].
+      :math:`lag = 0` in this example
 
-      At the end the lag with greatest correlation is returned.
     .. The duration of each image in gif  is 1000ms and loop is set to 1000
 
     .. code-block:: py
@@ -321,7 +437,7 @@ of the brain.
       y1=10*np.sin(x1)+1
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step)         # lag=8, lag_step=1  
-        >>1.0 3 #max(lincorr), lincorr.index(max(lincorr))
+        >>1.0 5
       # also lincorr[13] = 1, the program returns first highest value
 
     .. figure:: images/2.2.3Example.gif
@@ -332,12 +448,12 @@ of the brain.
       The y(n_i) represents n_i_th value of signal, 'i' stands for the number 
       of iterations. 
 
-      If  :math:`i == lag` , signals are not shiftet
-        | :math:`i < lag` , signal sig[1] is after sig[0].
-        | :math:`i > lag` , signal sig[0] is after sig[1]. 
-      :math:`lag = 8` in this example
+      If  :math:`i == 0` , signals are not shiftet
+        | :math:`i < 0` , signal sig[1] is after sig[0].
+        | :math:`i > 0` , signal sig[0] is after sig[1].
+      :math:`lag = 5` in this example, so sig[0] is ahead sig[1]
 
-      At the end the lag with greatest correlation is returned.
+      At the end the lag with first greatest correlation is returned.
     .. The duration of each image in gif  is 1000ms and loop is set to 1000
 
     .. code-block:: py
@@ -348,7 +464,7 @@ of the brain.
       y1 = np.sin(x1)
       sig = np.array([y1,-y1])
       compute_lincorr(sig, lag, lag_step) # lag=0, lag_step=1 
-        >>-1.0 0 #max(lincorr), lincorr.index(max(lincorr))
+        >>-1.0 0
       # The opposite signals have linear correlation equal -1
 
     .. figure:: images/2.2.4Example.png
@@ -367,9 +483,9 @@ of the brain.
       y2 = np.cos(x1)
       sig = np.array([y1,y2])
       compute_lincorr(sig, lag, lag_step) # lag=10, lag_step=1 
-        >>-0.946761134320959 13 #max(lincorr), lincorr.index(max(lincorr))
+        >>-0.946761134320959 -3
       # If corr value is negative, method take its absolute value and if it is 
-      # the maximal value, than method return value is negative.
+      # the maximal value, than method return value as negative.
 
     .. figure:: images/2.2.5Example.gif
       :name: Fig2.2.5
@@ -398,8 +514,78 @@ of the brain.
     :math:`ΦXt=arctan(xH/xt)`, where xH is the Hilbert transformation of the 
     time signal xt.
 
-  - PC is then calculated as PC = <PS>・(1-std(PS)/0.5), where std is the 
+  - PC is then calculated as :math:`PC = <PS>・(1-2*std(PS))`, where std is the 
     standard deviation and <・> stands for mean.
+
+  - Although this feature is empirical, it has mathematical background.
+    The 3 sigma rule says, for normal distribution 95 % of values are in the 
+    interval :math:`<mean(・)-2*std(・), mean(・)+2*std(・)>`, where the std(・)
+    stands for standart deviation.
+
+    Because all the values of PS lay in the interval :math:`(0,1>` and we 
+    obtain again value from interval :math:`(0,1>`, the 3 sigma rule is 
+    modified with multiplication standart deviation by mean. Then only the
+    lower bound is used.
+
+    In broad strokes, this feature pinpoint the value of PS above which are 
+    95 % of all PS values obtained with inserted phase lag and phase lag step.
+
+    The limitation of this feature is, that data often does not satisfy the 
+    normal distribution. Then the ressult does not have to fullfil this 
+    interpretation, nontheless the result is still usefull.
+
+  - Example
+
+    .. code-block:: py
+      :name: PC-example2.4.1
+
+      #Example1
+      x1=np.linspace(6*np.pi, 16*np.pi, num=4001)
+      y1=np.sin(x1)
+      y2=np.cos(x1)
+
+      sig = np.array([y1,y2])
+      lag = 500
+      lag_step = 1
+      compute_phase_const(sig, lag, lag_step)       
+
+        >> 0.8650275116884527                          
+
+    .. figure:: images/2.3.1Example.png
+      :name: Fig2.3.1
+
+    The histogram is devided to 10 bins to show the distribution of lagged PS
+    values. The orange line represents PC value calculated by this algorithm.
+
+    In previous example are all phase synchrony values near 1 and although they
+    are not normally distributed, PC returns value as they would be naturally 
+    distribudet with same mean and standart deviation.
+
+    .. code-block:: py
+      :name: PC-example2.4.2
+
+      #Example2
+      x1=np.linspace(6*np.pi, 16*np.pi, num=4001)
+      y1=np.sin(x1)
+      y2=np.cos(10000/(x1*x1)-4)
+
+      sig = np.array([y1,y2])
+      lag = 500
+      lag_step = 1
+      compute_phase_const(sig, lag, lag_step)     
+
+        >> 0.35096503373573645                         
+
+    .. figure:: images/2.3.2Example.png
+      :name: Fig2.3.2
+
+    The histogram is devided to 10 bins to show the distribution of lagged PS
+    values. The orange line represents PC value calculated by this algorithm.
+
+    In previous example are all phase synchrony values distributed across the 
+    whole interval and although they are not normally distributed, PC returns 
+    value as they would be naturally distributed with same mean and standart 
+    deviation.
 
 - Phase lag index
 
@@ -424,7 +610,7 @@ of the brain.
   - Example
 
     .. code-block:: py
-      :name: LinCorr-example2.4.1
+      :name: PLI-example2.4.1
 
       #Example1
       lag = 50
@@ -445,12 +631,12 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iteration. Gif shows signed values of
+    signal, 'i' stands for the the lag in iteration. Gif shows signed values of
     PLI for better understanding, but this feature counts only with absolute 
     value of PLI.
 
     .. code-block:: py
-      :name: LinCorr-example2.4.2
+      :name: PLI-example2.4.2
 
       #Example2
       x1=np.linspace(0.0, 8*np.pi, num=4001)
@@ -469,12 +655,12 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations. Gif shows signed values of
+    signal, 'i' stands for the the lag in iterations. Gif shows signed values of
     PLI for better understanding, but this feature counts only with absolute 
     value of PLI.
 
     .. code-block:: py
-      :name: LinCorr-example2.4.3
+      :name: PLI-example2.4.3
 
       #Example3
       x1=np.linspace(6*np.pi, 16*np.pi, num=2001)
@@ -494,7 +680,7 @@ of the brain.
 
     This gif shows, how does program go through the data with lag = 50 and 
     compute signes PLI between them. The y(n_i) represents n_i_th value of 
-    signal, 'i' stands for the number of iterations. Gif shows signed values of
+    signal, 'i' stands for the the lag in iterations. Gif shows signed values of
     PLI for better understanding, but this feature counts only with absolute 
     value of PLI.
 
@@ -578,9 +764,6 @@ of the brain.
 
       # Two signals with different phase have PS value near 1
   
-.. questgion
-  why unwrap?
-
 - Relative entropy
 
   - To evaluate the randomness and spectral richness between two time-series, 
@@ -617,6 +800,7 @@ of the brain.
   - The directional properties in epileptic signals need to be further explored.
 
   - Examples
+
     .. code-block:: py
       :name: LinCorr-example2.6.1
 
