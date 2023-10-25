@@ -391,6 +391,7 @@ def compute_arr(sig, fs):
     Parameters
     ----------
     sig: numpy.ndarray
+
     fs: float64
         sample frequency
 
@@ -399,7 +400,7 @@ def compute_arr(sig, fs):
     ARRm: numpy.float64
         ARR parameters
     r1, r2, r3: list
-                residuals for model order 1-3
+        residuals for model order 1-3
 
     Example
     -------

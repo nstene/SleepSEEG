@@ -18,7 +18,7 @@ def compute_signal_stats(sig):
     """
     Function to analyze basic signal statistics
 
-    Parameters:
+    Parameters
     ----------
     sig: np.array
         signal to analyze, time series (array, int, float)
@@ -34,8 +34,8 @@ def compute_signal_stats(sig):
         - power_perc25: 25 percentile of power in band
         - power_perc75: 75 percentile of power in band
 
-    Example
-    -------
+    Example:
+    --------
     sig_stats = compute_signal_stats(sig)
     """
 
@@ -74,7 +74,7 @@ class SignalStats(Method):
         """
         Class to analyze basic signal statistics
 
-        Parameters:
+        Parameters
         ----------
         sig: np.array
             signal to analyze, time series (array, int, float)

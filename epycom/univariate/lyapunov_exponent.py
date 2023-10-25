@@ -50,7 +50,7 @@ def _compute_acorr_exp(data, fs):
     """
     Find point, where autocorrelation drops to 1-1/np.e of it's maximum
 
-    Paremeters
+    Parameters
     ----------
     data: np.array
         Signal to analyze, time series (array, int, float)
