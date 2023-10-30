@@ -541,7 +541,7 @@ class JancaDetector(Method):
     algorithm_type = 'event'
     version = '1.0.0'
 
-    dtype = [('event_peak', 'float32'),  # spike position
+    dtype = [('event_peak', 'int32'),  # spike position
              # ('dur', 'float32'),  # spike duration - fix value 5 ms
              # ('condition', 'float32'),  # spike condition
              # ('weight', 'float32'),  # spike weight "CDF"
