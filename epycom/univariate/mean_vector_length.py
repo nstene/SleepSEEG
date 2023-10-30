@@ -13,7 +13,7 @@ import scipy.signal as sp
 from ..utils.method import Method
 
 
-def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
+def compute_mvl_count(data, fs, lowband=[8, 12], highband=[250, 600]):
     """
     Function to compute mean vector lenght (MVL) of given data
 
@@ -22,7 +22,7 @@ def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
     fs: float64
         frequency
     data: numpy.ndarray
-        data from which MI is computed
+        data from which MVL is computed
     lowband: list
             low frequency band boundaries [x, y], default [8, 12]
     highband: list
@@ -35,7 +35,7 @@ def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
 
     Example
     -------
-    MVL = compute_mvl_count(5000.0, data)
+    MVL = compute_mvl_count(data, 5000.0)
 
     """
     order = 3
@@ -44,11 +44,13 @@ def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
     lowband = np.divide(lowband, nyq)
     highband = np.divide(highband, nyq)
 
-    [b, a] = sp.butter(order, lowband, btype='bandpass', analog=False)
-    low = sp.filtfilt(b, a, data, axis=0)
+    sos_low = sp.butter(order, lowband, btype='bandpass', output='sos', 
+                        analog=False)
+    low = sp.sosfiltfilt(sos_low, data, axis=0)
 
-    [b, a] = sp.butter(order, highband, btype='bandpass', analog=False)
-    high = sp.filtfilt(b, a, data, axis=0)
+    sos_high = sp.butter(order, highband, btype='bandpass', output='sos', 
+                    analog=False)
+    high = sp.sosfiltfilt(sos_high, data, axis=0)
 
     # Extracting phase from the low frequency filtered analytic signal
     analytic_signal = sp.hilbert(low)
@@ -68,7 +70,7 @@ class MeanVectorLength(Method):
 
     algorithm = 'MEAN_VECTOR_LENGTH'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '1.1.0'
     dtype = [('mvl', 'complex64')]
 
     def __init__(self, **kwargs):

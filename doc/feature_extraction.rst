@@ -147,6 +147,8 @@ Univariate feature extraction
     .. figure:: images/1.3.5Example.png
       :name: Fig1.3.5
    
+    .. git remote set url
+
 
 - Lyapunov exponent
 
@@ -155,8 +157,43 @@ Univariate feature extraction
 
 - Mean vector length
 
-..
-  TODO
+  - The mean vector length (MVL)is phase-amplitude coupling feature and varies 
+    in complex numbers. The absolute value of MVL reflects homogenity of given 
+    signal in different frequencies. MVL without absolute value contain also 
+    information about "dominant" phase. 
+
+  - The MLV is calculated as: :math:`MVL = mean(amplitude * np.exp(j*phase))`,
+    where amplitude is amplitude of Hilbert signal filtered from high frequency 
+    band by Butterworth filter, wheras phase is calculated as phase of Hilbert
+    signal filtered from low frequency band by Butterworth filter. Low 
+    frequency band is by default :math:`<8, 12>` Hz and high frequency band is
+    by default :math:`<250, 600>` Hz and both low and high frequency bands can 
+    be changed in input.    
+
+  - Important denote is, to count with appropriate higher frequency boundaries. 
+    In general cases, high frequency boundaries should not exceed 
+    :math:`fs/5`. 
+
+  - Example
+
+    .. code-block:: py
+      :name: MVL-example1.5.1
+
+      #Example1
+      x1=np.linspace(6*np.pi, 16*np.pi, num=501)
+      data=np.random.rand(501)*np.sin(x1)
+      fs = 5000
+      # both sampling frequency and sample density are two times bigger than in 
+      # example above
+      compute_mvl_count(data, fs)       # lowband=[8, 12], highband=[250, 600]
+        >> 0.010344106096665445-0.0037269075888837133j
+
+    .. figure:: images/Ex1.5.1.png
+      :name: Fig1.5.1
+
+    In this example the complex values of Hilbert transformation does not show
+    any dominant phase and no phase coupling could not be seen. As a ressult
+    the mean value is relativly low.
 
 - Modulation index
 
