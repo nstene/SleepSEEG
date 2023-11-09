@@ -80,7 +80,7 @@ class MeanVectorLength(Method):
         fs: float64
             frequency
         data: numpy.ndarray
-            data from which MI is computed
+            data from which MVL is computed
         lowband: list
                 low frequency band boundaries [x, y]
         highband: list
