@@ -44,13 +44,11 @@ def compute_mvl_count(data, fs, lowband=[8, 12], highband=[250, 600]):
     lowband = np.divide(lowband, nyq)
     highband = np.divide(highband, nyq)
 
-    sos_low = sp.butter(order, lowband, btype='bandpass', output='sos', 
-                        analog=False)
-    low = sp.sosfiltfilt(sos_low, data, axis=0)
+    [b, a] = sp.butter(order, lowband, btype='bandpass', analog=False)
+    low = sp.filtfilt(b, a, data, axis=0)
 
-    sos_high = sp.butter(order, highband, btype='bandpass', output='sos', 
-                    analog=False)
-    high = sp.sosfiltfilt(sos_high, data, axis=0)
+    [b, a] = sp.butter(order, highband, btype='bandpass', analog=False)
+    high = sp.filtfilt(b, a, data, axis=0)
 
     # Extracting phase from the low frequency filtered analytic signal
     analytic_signal = sp.hilbert(low)
