@@ -30,7 +30,7 @@ def compute_relative_entropy(sig):
     ren: float
         Directional value of relative entropy between sig[0] and sig[1]
 
-    Example:
+    Example
     -------
     ren = compute_relative_entropy(sig)
     """

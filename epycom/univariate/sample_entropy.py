@@ -3,7 +3,7 @@
 # Research Center, Biomedical Engineering. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
-# Third pary imports
+# Third party imports
 import numpy as np
 from numba import njit
 
@@ -31,30 +31,9 @@ def _maxdist(x_i, x_j):
 
 
 @njit('f8(f8[:], f8, i8)', cache=True)
-def compute_sample_entropy(sig, r, m):
-    """
-       Function to compute sample entropy
-
-       Parameters
-       ----------
-       sig: np.ndarray
-           1D signal
-       r: np.float64
-           filtering treshold, recommended values: (0.1-0.25)*np.nanstd(sig)
-       m: int
-           window length of compared run of data, recommended (2-8)
-
-       Returns
-       -------
-       entropy: numpy.float64 (computed as -np.log(A / B))
-           approximate entropy
-
-       Example
-       -------
-       sample_entropy = approximate_entropy(data, 0.1*np.nanstd(data))
-    """
+def _compute_sample_entropy(sig, r, m):
     N = sig.shape[0]
-
+    r = r*np.nanstd(sig)
     xlen = N - m
     x = np.full((xlen, m), np.inf, dtype='float64')
     for i in range(N - m):
@@ -89,6 +68,31 @@ def compute_sample_entropy(sig, r, m):
 
     return -np.log(A / B)
 
+def compute_sample_entropy(sig, r=0.1, m=2):
+    """
+       Function to compute sample entropy
+
+       Parameters
+       ----------
+       sig: np.ndarray
+           1D signal
+       r: np.float64
+           filtering threshold, recommended values: 0.1-0.25
+       m: int
+           window length of compared run of data, recommended (2-8)
+
+       Returns
+       -------
+       entropy: numpy.float64 (computed as -np.log(A / B))
+           approximate entropy
+
+       Example
+       -------
+       sample_entropy = compute_sample_entropy(data, 0.1, 2)
+    """
+
+    return _compute_sample_entropy(sig.astype(float), float(r), int(m))
+
 
 class SampleEntropy(Method):
 
@@ -108,7 +112,7 @@ class SampleEntropy(Method):
         m: int
             window length of compared run of data, recommended (2-8)
         r: float64
-            filtering treshold, recommended values: (0.1-0.25)*std
+            filtering threshold, recommended values: (0.1-0.25)*std
         """
 
         super().__init__(compute_sample_entropy, **kwargs)

@@ -3,7 +3,7 @@
 # Research Center, Biomedical Engineering. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
-# Third pary imports
+# Third party imports
 import numpy as np
 from numba import njit
 
@@ -61,7 +61,12 @@ def _phi_jitted(m, N, r, sig):
 
 
 @njit('f8(f8[:], f8, i8)', cache=True)
-def compute_approximate_entropy(sig, r, m):
+def _compute_approximate_entropy(sig, r, m):
+    N = sig.shape[0]
+    r = r*np.nanstd(sig)
+    return abs(_phi_jitted(m + 1, N, r, sig) - _phi_jitted(m, N, r, sig))
+
+def compute_approximate_entropy(sig, r=0.1, m=2):
     """
     Function computes approximate entropy of given signal
 
@@ -70,7 +75,7 @@ def compute_approximate_entropy(sig, r, m):
     sig: np.ndarray
         1D signal
     r: np.float64
-        filtering treshold, recommended values: (0.1-0.25)*np.nanstd(sig)
+        filtering threshold, recommended values: 0.1-0.25
     m: int
         window length of compared run of data, recommended (2-8)
 
@@ -81,11 +86,10 @@ def compute_approximate_entropy(sig, r, m):
 
     Example
     -------
-    signal_entropy = approximate_entropy(data, 0.1*np.nanstd(data))
+    signal_entropy = compute_approximate_entropy(data, 0.1, 2)
     """
 
-    N = sig.shape[0]
-    return abs(_phi_jitted(m + 1, N, r, sig) - _phi_jitted(m, N, r, sig))
+    return _compute_approximate_entropy(sig.astype(float), float(r), int(m))
 
 
 class ApproximateEntropy(Method):
@@ -106,7 +110,7 @@ class ApproximateEntropy(Method):
         m: int
             window length of compared run of data, recommended (2-8)
         r: float64
-            filtering treshold, recommended values: (0.1-0.25)*std
+            filtering threshold, recommended values: (0.1-0.25)*std
        """
 
         super().__init__(compute_approximate_entropy, **kwargs)

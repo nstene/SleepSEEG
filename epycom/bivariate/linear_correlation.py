@@ -21,8 +21,8 @@ def compute_lincorr(sig, lag=0, lag_step=0):
     shifting the sig[1] from from negative lag to positive lag.
     From list of correlations takes the max correlation (best fit).
 
-    Parameters
-    ----------
+    Parameters:
+    -----------
     sig: np.array
         2D numpy array of shape (signals, samples), time series (int, float)
     lag: int
@@ -77,6 +77,24 @@ def compute_lincorr(sig, lag=0, lag_step=0):
 
 
 class LinearCorrelation(Method):
+    """
+    Linear correlation (Pearson's coefficient) between two time series
+
+    If lag and lag_step is not 0, calculates evolution of correlation by
+    shifting the sig[1] from from negative lag to positive lag.
+    From list of correlations takes the max correlation (best fit).
+
+    Parameters
+    ----------
+    sig: np.array
+        2D numpy array of shape (signals, samples),
+        time series (int, float)
+    lag: int
+        negative and positive shift of time series in samples
+    lag_step: int
+        step of shift
+
+    """
 
     algorithm = 'LINEAR_CORRELATION'
     algorithm_type = 'bivariate'
