@@ -12,7 +12,7 @@ import numpy as np
 from ..utils.method import Method
 
 
-def compute_hjorth_mobility(signal, fs=None):
+def compute_hjorth_mobility(signal, fs=5000):
     """
     Function to compute Hjorth mobility of time series
 
@@ -29,7 +29,7 @@ def compute_hjorth_mobility(signal, fs=None):
 
     Example
     -------
-    hjorth_mobility = compute_hjorth_mobility(data, 5000)
+    hjorth_mobility = compute_hjorth_mobility(signal, 5000)
 
     Note
     ----
@@ -38,6 +38,10 @@ def compute_hjorth_mobility(signal, fs=None):
 
     variancex = signal.var(ddof=1)
     # diff signal is one sample shorter
+    if variancex == 0:
+        return float('NaN')
+    # if the variance of original signal is zero, the variancedx would be also 
+    # zero and division 0/0 is undefined
     variancedx = np.var(np.diff(signal) * fs, ddof=1)
     # compute variance with degree of freedom=1 => The mean is normally
     # calculated as x.sum() / N, where N = len(x). If, however, ddof is
@@ -51,7 +55,7 @@ class HjorthMobility(Method):
 
     algorithm = 'HJORTH_MOBILITY'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '1.1.0'
     dtype = [('hjorth_mobility', 'float32')]
 
     def __init__(self, **kwargs):

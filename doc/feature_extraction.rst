@@ -24,13 +24,140 @@ Univariate feature extraction
 
 - Hjorth complexity
 
+  - The Hjort mobility (Hc) varies in the interval :math:`<0,inf)` and 
+    combines properties of signal with its own first and second derivative.
+
+  - By definition Hc is defined as :math:`Hc = Hm(X)/Hm(dX)`, where dx is 
+    derivative of original signal and Hm is Hjort mobility, which is further 
+    described later. With algebraic adjustment can be obtained 
+    :math:`Hc = sqrt(var(ddX)*var(X))/var(dX)` where the X is signal, dX is is 
+    first derivative of signal and ddX is second derivative of signal and sqrt
+    is square root.
+    Because of derivatives are both in numerator and denominator, using the 
+    numerical aproximation of derivative, the steps h (inversion of sampling 
+    frequency fs) cancel out.    
+
+  - Example
+
+    .. code-block:: py
+      :name: Hc-example1.1.1
+
+      #Example1
+      x1 = np.linspace(0*np.pi, 2*np.pi, num=5001)
+      sig = x1*0
+      compute_hjorth_complexity(sig)
+        >> nan
+      # var(ddx) = 0, var(dx) = 0, var(x) = 0
+
+    Linear functions have undefined Hc value, due to zero variance of dx, which
+    causes undefined 0/0 operation.
+
+    .. code-block:: py
+      :name: Hc-example1.1.2
+
+      #Example2
+      x1 = np.linspace(0*np.pi, 2*np.pi, num=5001)
+      sig = np.sin(x1)
+      compute_hjorth_complexity(sig)
+        >> 1.000000020000001
+      # var(ddx) = 1.2470854541719263e-12, var(dx) = 7.895682481841235e-07, 
+      # var(x) = 0.4999000199960008
+
+    .. code-block:: py
+      :name: Hc-example1.1.3
+
+      #Example3
+      x1 = np.linspace(0*np.pi, 2*np.pi, num=5001)
+      sig = 13*np.sin(2*x1) + 11
+      compute_hjorth_complexity(sig)
+        >> 1.0000000200000008
+      # var(ddx) = 3.3721164055632688e-09, var(dx) = 0.0005337479250571773,
+      # var(x) = 84.48310337932413
+
+    The Hc value is not affected by scaling, moving on y-axis or change of 
+    frequency.
+
+    .. code-block:: py
+      :name: Hc-example1.1.3
+
+      #Example3
+      x2=np.linspace(0, 10, num=4001)
+      sig = x1*x1 - 3*x1 + 1
+      compute_hjorth_complexity(sig)
+        >> 1.2836054995011157e-09
+      # var(ddx) = 1.5407193989507215e-28, var(dx) = 0.0002083333203125,
+      # var(x) = 464.1486145781251
+
+    The Hc value of quadratic function is 0, because of second derivative of
+    quadratic function is a constant with variance equal 0. The ressult is not 
+    precisly 0, because of rounding error.
+
 ..
-  TODO
+  Problem with Hjort features is rounding error. Because of rouding error
+  the second derivative could be non-zero, or variance could be non-zero, even
+  if it should be. As an error the feature return non-zero value, even if
+  the ressult should be nan.
+  Although this seems to be a big problem, this cases are not expected to 
+  accure in real signals, if the signal is not corrupted.
 
 - Hjorth mobility
 
-..
-  TODO
+  - The Hjort mobility (Hm) varies in the interval :math:`<0,inf)` and 
+    combines properties of signal with its own derivative.
+
+  - The Hm is calculated as :math:`Hm = sqrt(var(dX)/var(X))`, where sqrt 
+    stands for square root, var is variance, x is original signal and dx is
+    derivative of the original signal.
+
+    Derivative of original signal is calculated as 
+    :math:`dX(i) = (X(i+1)-X(i)) * fs`, where fs as a sampling frequency is 
+    multiplicative inverse of step size. This approach has clear advantage
+    against simplier difference without multiplying, due to compereability with 
+    data obtained with different sampling frequency. Variance in all cases is 
+    calculated by numpy library as :math:`var(X) = mean(X^2) - (mean(X))^2`, 
+    where ^2 operator is meant as an element-wise.
+
+  - Example
+
+    .. code-block:: py
+      :name: Hm-example1.2.1
+
+      #Example1
+      x1 = np.linspace(0*np.pi, 2*np.pi, num=5001)
+      sig = x1
+      fs = 5000
+      compute_hjorth_mobility(sig, fs)
+        >> 7.696928775346762e-13
+      # var(dx) = 1.9501766826626976e-24, var(x) = 3.2918423177661214
+
+    The Hjort mobility of linear function is 0, because of the derivative of
+    linear function is constant value with variance equal 0. The Hjort mobility
+    of constant function is undefined, because of variance of constant function
+    and variance of its derivative are 0 and 0/0 is undefined.
+
+    .. code-block:: py
+      :name: Hm-example1.2.2
+
+      #Example1
+      x1 = np.linspace(0*np.pi, 2*np.pi, num=5001)
+      sig = np.sin(x1)
+      fs = 5000
+      compute_hjorth_mobility(sig, fs)
+        >> 6.283813306515432
+      # var(dx) = 19.743154835570206, var(x) = 0.5
+
+    .. code-block:: py
+      :name: Hm-example1.2.3
+
+      #Example1
+      x1 = np.linspace(0*np.pi, 2*np.pi, num=5001)
+      sig = 13*np.sin(x1) + 11
+      fs = 5000
+      compute_hjorth_mobility(sig, fs)
+        >> 6.283813306515432
+      # var(dx) = 19.743154835570206, var(x) = 0.5
+
+    Hm value is not affected by scaling or moving on y-axis.
 
 - Low frequency marker
 
@@ -62,7 +189,7 @@ Univariate feature extraction
   - Example
   
     .. code-block:: py
-      :name: Coh-example1.3.1
+      :name: LFM-example1.3.1
 
       #Example1
       x1=np.linspace(0*np.pi, 8*np.pi, num=2001)
@@ -82,7 +209,7 @@ Univariate feature extraction
     As you can see in the next example:
 
     .. code-block:: py
-      :name: Coh-example1.3.2
+      :name: LFM-example1.3.2
 
       #Example2
       x1=np.linspace(0*np.pi, 8*np.pi, num=2001)
@@ -101,7 +228,7 @@ Univariate feature extraction
     leads to a higher sample density:
 
     .. code-block:: py
-      :name: Coh-example1.3.3
+      :name: LFM-example1.3.3
 
       #Example3
       x1=np.linspace(0*np.pi, 8*np.pi, num=4001)
@@ -119,7 +246,7 @@ Univariate feature extraction
     otherwise the ressult could be different:
 
     .. code-block:: py
-      :name: Coh-example1.3.4
+      :name: LFM-example1.3.4
 
       #Example4
       x1=np.linspace(0*np.pi, 2*np.pi, num=1001)
@@ -134,7 +261,7 @@ Univariate feature extraction
     The ressult is not dependent on scaling of signal:
 
     .. code-block:: py
-      :name: Coh-example1.3.5
+      :name: LFM-example1.3.5
 
       #Example5
       x1=np.linspace(0*np.pi, 8*np.pi, num=4001)
@@ -146,7 +273,6 @@ Univariate feature extraction
 
     .. figure:: images/1.3.5Example.png
       :name: Fig1.3.5
-   
 
 - Lyapunov exponent
 
@@ -155,8 +281,61 @@ Univariate feature extraction
 
 - Mean vector length
 
-..
-  TODO
+  - The mean vector length (MVL)is phase-amplitude coupling feature and varies 
+    in complex numbers. The absolute value of MVL reflects homogenity of given 
+    signal in different frequencies. MVL without absolute value contain also 
+    information about "dominant" phase. 
+
+  - The MLV is calculated as: :math:`MVL = mean(amplitude * np.exp(j*phase))`,
+    where amplitude is amplitude of Hilbert signal filtered from high frequency 
+    band by Butterworth filter, wheras phase is calculated as phase of Hilbert
+    signal filtered from low frequency band by Butterworth filter. Low 
+    frequency band is by default :math:`<8, 12>` Hz and high frequency band is
+    by default :math:`<250, 600>` Hz and both low and high frequency bands can 
+    be changed in input.    
+
+  - Important denote is, to count with appropriate higher frequency boundaries. 
+    In general cases, high frequency boundaries should not exceed 
+    :math:`fs/5`. 
+
+  - Example
+
+    .. code-block:: py
+      :name: MVL-example1.5.1
+
+      #Example1
+      x1=np.linspace(6*np.pi, 16*np.pi, num=501)
+      data=np.random.rand(501)*np.sin(x1)
+      fs = 5000
+      # both sampling frequency and sample density are two times bigger than in 
+      # example above
+      compute_mvl_count(data, fs)       # lowband=[8, 12], highband=[250, 600]
+        >> 0.006292227798293142+0.00038112301129766796j
+
+    .. figure:: images/1.5.1Example.png
+      :name: Fig1.5.1
+
+    In first part of the algorithm signal is filtered in lowband :math:`[8,12]` 
+    Hz, and on the ressult the hilbert transforamation is aplied (the first 
+    row, graph on left). Then from the complex signal values are taken in 
+    euklidian formula as :math:`abs*exp(phi*j)` and the phase phi is saved 
+    (first row, graph on right).
+
+    Next the same procedure is taken in highband :math:`[250, 600]` Hz, but now
+    the abs value is stored (second row on right). 
+    
+    From these phase and aplitude values the new complex signal is created and 
+    values are writen as :math:`a+b*j`, the a(i) row is the real signal part 
+    and b(i) is imaginary signal part (graph in third row), j is imaginary 
+    number :math:`j^2 = -1`.
+
+    At the end, coresponding a(i), b(i) are taken as one vector (blue stars in 
+    graph in the last row) and the mean value is calculated from them (orange 
+    line).
+
+    In this example the complex values of Hilbert transformation does not show
+    any dominant phase and no phase coupling could not be seen. As a ressult
+    the mean value is relativly low.
 
 - Modulation index
 
