@@ -281,22 +281,59 @@ Univariate feature extraction
 
 - Mean vector length
 
-  - The mean vector length (MVL)is phase-amplitude coupling feature and varies 
-    in complex numbers. The absolute value of MVL reflects homogenity of given 
-    signal in different frequencies. MVL without absolute value contain also 
-    information about "dominant" phase. 
+  - The mean vector length (MVL) is phase-amplitude coupling feature and varies 
+    in complex numbers. 
+    Based on article:
+
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
+
+    the evaluating absolute value of output is recomended to use: 
+
+    .. code-block:: py
+      :name: MVL1.5.0
+
+      np.abs(compute_mvl_count(sig, fs))
+
+    The absolute value of MVL reflects the homogenity of signal and existance 
+    of phase coupling. The near zero value mean no phase coupling, the great 
+    absolute MVL mean the signal contains some phase coupling.
+
+    The complex number also contains information about the dominant phase, or 
+    in other words information about the phase lag between the low and high 
+    band signals. This information has not yet been investigated further, so it 
+    cannot be considered useful and could potentially have some influence on 
+    the model in which it is used.
 
   - The MLV is calculated as: :math:`MVL = mean(amplitude * np.exp(j*phase))`,
     where amplitude is amplitude of Hilbert signal filtered from high frequency 
     band by Butterworth filter, wheras phase is calculated as phase of Hilbert
     signal filtered from low frequency band by Butterworth filter. Low 
-    frequency band is by default :math:`<8, 12>` Hz and high frequency band is
-    by default :math:`<250, 600>` Hz and both low and high frequency bands can 
-    be changed in input.    
+    frequency band is by default :math:`<4, 8>` Hz and high frequency band is
+    by default :math:`<80, 150>` Hz and both low and high frequency bands can 
+    be changed in input. Both low and high high frequency boundaries are based
+    on article:
+
+    R. T. Canolty et al. ,High Gamma Power Is Phase-Locked to Theta 
+    Oscillations in Human Neocortex.Science313,1626-1628(2006).
+    DOI:10.1126/science.1128115
+
+    Further description of the MVL calculation is given in the example below.
 
   - Important denote is, to count with appropriate higher frequency boundaries. 
     In general cases, high frequency boundaries should not exceed 
     :math:`fs/5`. 
+
+  - Further description of MVL feature is contained in the article:
+
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
 
   - Example
 
@@ -305,11 +342,11 @@ Univariate feature extraction
 
       #Example1
       x1=np.linspace(6*np.pi, 16*np.pi, num=501)
-      data=np.random.rand(501)*np.sin(x1)
+      sig=np.random.rand(501)*np.sin(x1)
       fs = 5000
       # both sampling frequency and sample density are two times bigger than in 
       # example above
-      compute_mvl_count(data, fs)       # lowband=[8, 12], highband=[250, 600]
+      compute_mvl_count(sig, fs, lowband=[8, 12], highband=[250, 600])
         >> 0.006292227798293142+0.00038112301129766796j
 
     .. figure:: images/1.5.1Example.png
@@ -336,6 +373,8 @@ Univariate feature extraction
     In this example the complex values of Hilbert transformation does not show
     any dominant phase and no phase coupling could not be seen. As a ressult
     the mean value is relativly low.
+    The sensitivity of the MVL to amplitude outliers is also visible as one of 
+    the caveats of the MVL.
 
 - Modulation index
 
@@ -852,7 +891,7 @@ of the brain.
         >> 0.5328774329300369 -15            # max_PLI, max_PLI_lag
 
       # Program takes the first biggest value with its time-lag value in samples.
-      # Program calculates only the absulute value of PLI
+      # Program calculates only the absolute value of PLI
 
     .. figure:: images/2.4.3Example.gif
       :name: Fig2.4.3
@@ -882,6 +921,7 @@ of the brain.
     The :math:`PS -> 0` indicates the big diversity in signal frequency.
 
   - Examples
+
     .. code-block:: py
       :name: LinCorr-example2.5.1
 
