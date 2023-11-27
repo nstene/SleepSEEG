@@ -344,21 +344,19 @@ Univariate feature extraction
       x1=np.linspace(6*np.pi, 16*np.pi, num=501)
       sig=np.random.rand(501)*np.sin(x1)
       fs = 5000
-      # both sampling frequency and sample density are two times bigger than in 
-      # example above
       compute_mvl_count(sig, fs, lowband=[8, 12], highband=[250, 600])
         >> 0.006292227798293142+0.00038112301129766796j
 
     .. figure:: images/1.5.1Example.png
       :name: Fig1.5.1
 
-    In first part of the algorithm signal is filtered in lowband :math:`[8,12]` 
+    In first part of the algorithm signal is filtered in lowband :math:`[4,8]` 
     Hz, and on the ressult the hilbert transforamation is aplied (the first 
     row, graph on left). Then from the complex signal values are taken in 
     euklidian formula as :math:`abs*exp(phi*j)` and the phase phi is saved 
     (first row, graph on right).
 
-    Next the same procedure is taken in highband :math:`[250, 600]` Hz, but now
+    Next the same procedure is taken in highband :math:`[80, 150]` Hz, but now
     the abs value is stored (second row on right). 
     
     From these phase and aplitude values the new complex signal is created and 
@@ -383,10 +381,94 @@ Univariate feature extraction
 
 - Phase locking value
 
-..
-  TODO
+  - The phase locking value (PLV) is phase-amplitude coupling feature and 
+    varies inside complex unit circle :math:`0 <= abs(PLV) <= 1`.
+    Based on article:
 
-- Powe spectral entropy
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
+
+    the evaluating absolute value of output is recomended to use:
+
+    .. code-block:: py
+      :name: PLV1.7.0
+
+      np.abs(compute_plv_count(sig, fs))
+
+  - First of all, algorithm use Butterworth filter in lowband :math:`[4,8]` and
+    highband :math:`[80,150]` Hz. This 2 signals are then transformed by 
+    Hilbert transformation to complex signals.
+
+    Using euklidian formula as :math:`a + b*j = abs*exp(phi*j)`,we can 
+    extract phase1 from the lowband signal and amplitude from the highband 
+    signal. To the amplitude is then aplied hilbert transformation and from this
+    complex signal is extracted phase2.
+
+    The phases phase1 and phase2 are then subtracted element-wise as 
+    :math:`phase = phase1 - phase2` and are used to create phase locking signal 
+    (PLS) by formula :math:`PLS = exp(phase*j)`. All values from PLS lays on 
+    complex unit circle holding :math:`angle = phase` with oriented x axis.
+
+  - The PVL is calculated as: :math:`PVL = mean(np.exp(phase*j)) = mean(PLS)`, 
+    where phase is mentioned earlier and j is complex constant 
+    :math:`j^2 = -1`.
+
+  - Example
+
+    .. code-block:: py
+      :name: PLV-example1.7.1
+
+      #Example1
+      fs = 5000
+      x1=np.linspace(0*np.pi, 4*np.pi, num=10001)
+      sig=np.sin(20*x1)+np.sin(120*x1)*np.exp(-x1)
+      compute_plv_count(sig, fs=fs, lowband=[4, 8], highband=[80, 150])
+        >> 0.45569549961750905+0.01530084091583396j
+
+    .. figure:: images/1.7.1Example.png
+      :name: Fig1.7.1
+
+    In the picture, on the top left corner there is the signal filtered from 
+    the original signal with Butterworth filter in :math:`<4,8>` Hz band as the 
+    real signal and its Hilbert transformation as the imag signal. From this 
+    complex signal the phase1 is extracted.
+    In the second row of graphs on the left, there is amplitude of the Hilbert 
+    transforamation of signal filtere in signal in  :math:`80,150` Hz band as 
+    the real signal and its hilbert transformation as the imag sig. On the 
+    right side there is phase2 extracted from the signal on left.
+    In the third row, there is signal created by phase difference of phase1 and 
+    phase2, on left with its complex values and on right as simple 
+    :math:`phase1-phase2` difference.
+    The values of the third row are inserted into complex plane in the bottom 
+    of the picture as the blue stars, the more denser blue is, the more values 
+    lie on this part of unit circe. The mean is then calculated and displayed 
+    as orange vector.
+
+    The PLV in this example shows some phase locking around zero angle (also 
+    visible in the third row in values 6000-10000), but not the absolute phase 
+    locking because values 0-6000 does not show this coupling.
+    This picture is only for better understanding, the real data should never 
+    look like this.
+
+    Special example is the constant zero value. When all phase values are same.
+
+    .. code-block:: py
+      :name: PLV-example1.7.2
+
+      #Example1
+      fs = 5000
+      x1=np.linspace(0*np.pi, 4*np.pi, num=10001)
+      sig=x1*0
+      compute_plv_count(sig, fs=fs, lowband=[4, 8], highband=[80, 150])
+        >> 1+0j
+
+    .. figure:: images/1.7.2Example.png
+      :name: Fig1.7.2
+
+- Power spectral entropy
 
 ..
   TODO
@@ -1096,7 +1178,7 @@ of the brain.
     Transform, '*' is element-wise multiplication and ifft is Inverse
     Fast Fourier Transform and X,Y are the evaluated signals.
   
-    To convolved signal the Hilbert transforamation is aplied and from all
+    To convolved signal the Hilbert transformation is aplied and from all
     absolute values the mean and standart deviation is calculated. The mean and
     standart deviation are both calculated by numpy library, the Hilbert 
     transform is calculated by scipy.signal library.
