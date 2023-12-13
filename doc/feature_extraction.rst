@@ -376,8 +376,93 @@ Univariate feature extraction
 
 - Modulation index
 
-..
-  TODO
+  - Modulation index (MI) is phase-amplitude coupling feature varies in 
+    interval:math:`(0,1)`.
+
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
+
+  - From all phase-amplitude features the MI is the least sensitive to different
+    sampling frequencies, but is sensitive to length of signal and number of
+    bins (nbins) given in the input (default number of bins is based on the 
+    paper and is set to 18). Number of bins have to be at least 2.
+
+  - The calculation of MI runs in few steps. At first the bins bounds in range 
+    :math:`<-pi pi)`, based on number of bins in input, are calculated. 
+    Then, the hilbert transformation from the imput signal is calculated.
+    In the third step, from the complex signal the apmlitude and phase is 
+    calculated using euclidian formula :math:`a+b*j=amplitude*exp(phase*j)`. 
+    For each phase bin the mean of amplitudes is calculated. The next step is 
+    normalization of amplitudes by 
+    :math:`amp[i] := amp[i]/sum(amp[0:(nbins-1)]) `.From the obtained data the 
+    Shanon entropy (H) as :math:`H = -sum(amp*log(amp))`. From Shanon entropy 
+    the Kullback-Leibler distance (KL) is calculated as 
+    :math:`Kl = log(nbins) - H`.  From Kullback-Leibler distance the final MI 
+    calculation is computed as :math:`MI = KL/log(nbins)`.
+
+  - For the constant signal the NaN (not a number) is returned, because it 
+    would make some bins empty. The nan could be also returned in other cases, 
+    if the phase of the signal is not distributed in all phase bins.
+ 
+    In general the higher MI value, the higher phase-amplitude coupling is. In 
+    the real signal, values close to 1 should be almost never obtained.
+
+  - Example
+
+    .. code-block:: py
+      :name: MI-example1.6.1
+
+      #Example1
+      fs = 5000
+      sig=np.ones(10001) #constant value 1
+      print(compute_mi_count(sig, nbins=18))
+        >> nan
+
+    As was said before, the constant signal would ressult with NaN return.
+
+    .. code-block:: py
+      :name: MI-example1.6.2
+
+      #Example2
+      fs = 5000
+      x1=np.linspace(6*np.pi, 16*np.pi, num=10001)
+      sig=np.sin(20*x1)+np.sin(120*x1)*np.exp(-x1)
+      print(compute_mi_count(sig, nbins=18))
+        >> 0.11739821053370704
+
+    .. figure:: images/1.6.2.1Example.png
+      :name: Fig1.6.2.1
+
+    First image represents the input signal in the real part and its hilbert 
+    transformation as the imaginary part.
+
+    .. figure:: images/1.6.2.2Example.png
+      :name: Fig1.6.2.2
+
+    Second graph shows complex signal from image above, represented as 
+    amplitude and phase in radians. We can plot the same data in graph, where 
+    the amplitude depends on the phase.
+
+    The ticks represents boundaries for each bin.
+
+    .. figure:: images/1.6.2.3Example.png
+      :name: Fig1.6.2.3
+
+    From this data is created image below. The x-axis represents phases in 
+    radians and the y-axis represents normalized mean value for each bin. The 
+    length of the line shows aproximation of width of each bin. The ticks 
+    represents boundaries for each bin.
+
+    .. figure:: images/1.6.2.4Example.png
+      :name: Fig1.6.2.4
+  
+    There are large mean values visible around the 0 radians, and also around 
+    0.5 pi radians, which is mainly affected by big amplitudes at the beginning 
+    and end of the signal (visible on second graph or as the outliers in third 
+    graph).
 
 - Phase locking value
 
@@ -501,12 +586,12 @@ of the brain.
     The coherence between two signals can be calculated with a time-lag. 
     Maximum time-lag should not exceed :math:`fmax/2`.
 
-  - Coh is calcualted by coherence method in scipy.signal as: 
+  - Coh is calculated by coherence method in scipy.signal as: 
     :math:`Coh(X,Y)=[|P(X,Y)|/(√(P(X,X)・P(Y,Y)))]`. 
     Where X,Y are the two evaluated signals, |・| stands for absolute value, 
     √ stands for square root, P(X,X) and P(Y,Y) stands for power spectral 
     density estimation and P(X,Y) stands for cross spectral density estimation.
-    The P(X,X) is calcualted as
+    The P(X,X) is calculated as
 
   - Lagged coherence is calculated (LagCoh) by coherence method in scipy.signal 
     as: :math:`LagCoh(X',Y)=[|P(X',Y)|/(√(P(X',X')・P(Y,Y)))]`.
@@ -901,7 +986,7 @@ of the brain.
     represents signum function, <・> stands for mean, |・| stands for absolute 
     value and ΔΦ is a phase difference between two iEEG signals.
 
-  - PLI could be in general also calculaced without absolute value, then the sign 
+  - PLI could be in general also calculated without absolute value, then the sign 
     represents direction. This feature does not alow calculation of signed value.
 
   - Maximum time-lag should not exceed fmax/2. The maximum value of PLI is stored 
