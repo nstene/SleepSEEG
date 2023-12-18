@@ -555,8 +555,131 @@ Univariate feature extraction
 
 - Power spectral entropy
 
-..
-  TODO
+  - The Power spectral entropy (PSE) varies in the interval 
+    :math:`(0,log2(length(sig))>`, where the log2 is logarithm with base 2 and 
+    length(sig) stands for the length of the input signal.
+
+  - The Power spectral entropy is normalized feature, so multiplication by 
+    constant would make no difference to the output.
+
+  - In the first step of the calculation, the Fast Fourier Transform (fft) of 
+    the input signal is calculated. This fft signal is squared element-wise as 
+    :math:`a_i := a_i^2`, where a_i is i-th element of the signal. Then the 
+    signal is normalized using :math:`p_i := a_i/sum(a)`, where sum(a) is sum 
+    of the elements of the signal. From normalized signal, the entropy H is 
+    calculated, using formula :math:`H = sum(p_i * log2(p_i))`, where log2 is 
+    the logarithm with base 2. The entropy H is returned as output of this 
+    function.
+
+  - Example
+
+    .. code-block:: py
+      :name: PLV-example1.8.1
+
+      #Example1
+      sig = np.ones(10001)
+      compute_pse(sig)
+        >> 2.65551518538626e-29
+
+    .. figure:: images/1.8.1.1Example.png
+      :name: Fig1.8.1.1
+
+    The original signal contains constant signal (not visible due to big scale) 
+    and its Fourier series which is big at the first element, but zero 
+    everywhere else.
+
+    .. figure:: images/1.8.1.2Example.png
+      :name: Fig1.8.1.2
+
+    The normalized fft signal differs from the unnormalized fft signal only by 
+    a different scale.
+    The ressult of the PSE in this case is 0 (with some numerical error).
+
+    .. code-block:: py
+      :name: PLV-example1.8.2
+
+      #Example2
+      sig = np.real(np.fft.ifft(np.ones(10001)))
+      compute_pse(sig)
+        >> 13.287856641838337
+      # np.log2(10001) = 13.287856641840545
+
+    Input signal is created to have constant Fourier transforamation. This 
+    signal should have the biggest PSE value, which is close to logarithm of 
+    lenght of input signal. However, this type of signal should not be usual 
+    at real signals.
+
+    .. figure:: images/1.8.2.1Example.png
+      :name: Fig1.8.2.1
+
+    This original signal has only one non-zero value at the beginning. And you 
+    can easily see that the Fourier transform of this signal has a constant 
+    value (with some calculation error).
+
+    .. figure:: images/1.8.2.2Example.png
+      :name: Fig1.8.2.2
+
+    .. code-block:: py
+      :name: PLV-example1.8.3
+
+      #Example3
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1
+      sig = np.sin(x1)
+      compute_pse(sig)
+        >> 1.0000036953163833
+
+    .. code-block:: py
+      :name: PLV-example1.8.3
+
+      #Example3
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 7*np.sin(x1)
+      compute_pse(sig)
+        >> 1.0000036953163833
+
+    .. code-block:: py
+      :name: PLV-example1.8.4
+
+      #Example4
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 7*np.sin(x1)
+      compute_pse(sig)
+        >> 1.0000036953163833
+
+      As you can see on example 3 and 4 above, scaling by multiplication does 
+      not change output, because the feature is normalized.
+
+      However, shifting on y-axis could cause some change as you can see on 
+      examples 5 and 6 below. Shift could increase or decrese  PSE value.
+
+          .. code-block:: py
+      :name: PLV-example1.8.5
+
+      #Example5
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 13+7*np.sin(x1)
+      compute_pse(sig)
+        >> 0.6746547357194002
+
+    .. code-block:: py
+      :name: PLV-example1.8.6
+
+      #Example6
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 3+7*np.sin(x1)
+      compute_pse(sig)
+        >> 1.5708852216530274
+
+    The difference in the output after shift is caused by change of first 
+    element of Fourier transformed signal. If the shift is much stronger than 
+    any other frequency, the output of PSE will be smaller. If the shift is 
+    similarly strong as other frequencies (elements of the Fourier transformed 
+    signal), the output of PSE should be bigger.
 
 - Sample entropy
 ..
