@@ -27,7 +27,7 @@ def compute_pse(sig):
 
     Example
     -------
-    pac = comute_pse(sig)
+    pse = comute_pse(sig)
     """
 
     ps = np.abs(np.fft.fft(sig))  # power spectrum
