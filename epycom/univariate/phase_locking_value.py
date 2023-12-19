@@ -13,7 +13,7 @@ import scipy.signal as sp
 from ..utils.method import Method
 
 
-def compute_plv_count(sig, fs, lowband=[4, 8], highband=[80, 150]):
+def compute_plv_count(sig, fs=None, lowband=[4, 8], highband=[80, 150]):
     """
     Function to compute phase-locking value (PLV) of given signal
 
