@@ -655,7 +655,7 @@ Univariate feature extraction
       However, shifting on y-axis could cause some change as you can see on 
       examples 5 and 6 below. Shift could increase or decrese  PSE value.
 
-          .. code-block:: py
+    .. code-block:: py
       :name: PLV-example1.8.5
 
       #Example5
