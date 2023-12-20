@@ -281,22 +281,59 @@ Univariate feature extraction
 
 - Mean vector length
 
-  - The mean vector length (MVL)is phase-amplitude coupling feature and varies 
-    in complex numbers. The absolute value of MVL reflects homogenity of given 
-    signal in different frequencies. MVL without absolute value contain also 
-    information about "dominant" phase. 
+  - The mean vector length (MVL) is phase-amplitude coupling feature and varies 
+    in complex numbers. 
+    Based on article:
+
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
+
+    the evaluating absolute value of output is recomended to use: 
+
+    .. code-block:: py
+      :name: MVL1.5.0
+
+      np.abs(compute_mvl_count(sig, fs))
+
+    The absolute value of MVL reflects the homogenity of signal and existance 
+    of phase coupling. The near zero value mean no phase coupling, the great 
+    absolute MVL mean the signal contains some phase coupling.
+
+    The complex number also contains information about the dominant phase, or 
+    in other words information about the phase lag between the low and high 
+    band signals. This information has not yet been investigated further, so it 
+    cannot be considered useful and could potentially have some influence on 
+    the model in which it is used.
 
   - The MLV is calculated as: :math:`MVL = mean(amplitude * np.exp(j*phase))`,
     where amplitude is amplitude of Hilbert signal filtered from high frequency 
     band by Butterworth filter, wheras phase is calculated as phase of Hilbert
     signal filtered from low frequency band by Butterworth filter. Low 
-    frequency band is by default :math:`<8, 12>` Hz and high frequency band is
-    by default :math:`<250, 600>` Hz and both low and high frequency bands can 
-    be changed in input.    
+    frequency band is by default :math:`<4, 8>` Hz and high frequency band is
+    by default :math:`<80, 150>` Hz and both low and high frequency bands can 
+    be changed in input. Both low and high high frequency boundaries are based
+    on article:
+
+    R. T. Canolty et al. ,High Gamma Power Is Phase-Locked to Theta 
+    Oscillations in Human Neocortex.Science313,1626-1628(2006).
+    DOI:10.1126/science.1128115
+
+    Further description of the MVL calculation is given in the example below.
 
   - Important denote is, to count with appropriate higher frequency boundaries. 
     In general cases, high frequency boundaries should not exceed 
     :math:`fs/5`. 
+
+  - Further description of MVL feature is contained in the article:
+
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
 
   - Example
 
@@ -305,23 +342,21 @@ Univariate feature extraction
 
       #Example1
       x1=np.linspace(6*np.pi, 16*np.pi, num=501)
-      data=np.random.rand(501)*np.sin(x1)
+      sig=np.random.rand(501)*np.sin(x1)
       fs = 5000
-      # both sampling frequency and sample density are two times bigger than in 
-      # example above
-      compute_mvl_count(data, fs)       # lowband=[8, 12], highband=[250, 600]
+      compute_mvl_count(sig, fs, lowband=[8, 12], highband=[250, 600])
         >> 0.006292227798293142+0.00038112301129766796j
 
     .. figure:: images/1.5.1Example.png
       :name: Fig1.5.1
 
-    In first part of the algorithm signal is filtered in lowband :math:`[8,12]` 
+    In first part of the algorithm signal is filtered in lowband :math:`[4,8]` 
     Hz, and on the ressult the hilbert transforamation is aplied (the first 
     row, graph on left). Then from the complex signal values are taken in 
     euklidian formula as :math:`abs*exp(phi*j)` and the phase phi is saved 
     (first row, graph on right).
 
-    Next the same procedure is taken in highband :math:`[250, 600]` Hz, but now
+    Next the same procedure is taken in highband :math:`[80, 150]` Hz, but now
     the abs value is stored (second row on right). 
     
     From these phase and aplitude values the new complex signal is created and 
@@ -336,21 +371,315 @@ Univariate feature extraction
     In this example the complex values of Hilbert transformation does not show
     any dominant phase and no phase coupling could not be seen. As a ressult
     the mean value is relativly low.
+    The sensitivity of the MVL to amplitude outliers is also visible as one of 
+    the caveats of the MVL.
 
 - Modulation index
 
-..
-  TODO
+  - Modulation index (MI) is phase-amplitude coupling feature varies in 
+    interval:math:`(0,1)`.
+
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
+
+  - From all phase-amplitude features the MI is the least sensitive to different
+    sampling frequencies, but is sensitive to length of signal and number of
+    bins (nbins) given in the input (default number of bins is based on the 
+    paper and is set to 18). Number of bins have to be at least 2.
+
+  - The calculation of MI runs in few steps. At first the bins bounds in range 
+    :math:`<-pi pi)`, based on number of bins in input, are calculated. 
+    Then, the hilbert transformation from the imput signal is calculated.
+    In the third step, from the complex signal the apmlitude and phase is 
+    calculated using euclidian formula :math:`a+b*j=amplitude*exp(phase*j)`. 
+    For each phase bin the mean of amplitudes is calculated. The next step is 
+    normalization of amplitudes by 
+    :math:`amp[i] := amp[i]/sum(amp[0:(nbins-1)]) `.From the obtained data the 
+    Shanon entropy (H) as :math:`H = -sum(amp*log(amp))`. From Shanon entropy 
+    the Kullback-Leibler distance (KL) is calculated as 
+    :math:`Kl = log(nbins) - H`.  From Kullback-Leibler distance the final MI 
+    calculation is computed as :math:`MI = KL/log(nbins)`.
+
+  - For the constant signal the NaN (not a number) is returned, because it 
+    would make some bins empty. The nan could be also returned in other cases, 
+    if the phase of the signal is not distributed in all phase bins.
+ 
+    In general the higher MI value, the higher phase-amplitude coupling is. In 
+    the real signal, values close to 1 should be almost never obtained.
+
+  - Example
+
+    .. code-block:: py
+      :name: MI-example1.6.1
+
+      #Example1
+      fs = 5000
+      sig=np.ones(10001) #constant value 1
+      print(compute_mi_count(sig, nbins=18))
+        >> nan
+
+    As was said before, the constant signal would ressult with NaN return.
+
+    .. code-block:: py
+      :name: MI-example1.6.2
+
+      #Example2
+      fs = 5000
+      x1=np.linspace(6*np.pi, 16*np.pi, num=10001)
+      sig=np.sin(20*x1)+np.sin(120*x1)*np.exp(-x1)
+      print(compute_mi_count(sig, nbins=18))
+        >> 0.11739821053370704
+
+    .. figure:: images/1.6.2.1Example.png
+      :name: Fig1.6.2.1
+
+    First image represents the input signal in the real part and its hilbert 
+    transformation as the imaginary part.
+
+    .. figure:: images/1.6.2.2Example.png
+      :name: Fig1.6.2.2
+
+    Second graph shows complex signal from image above, represented as 
+    amplitude and phase in radians. We can plot the same data in graph, where 
+    the amplitude depends on the phase.
+
+    The ticks represents boundaries for each bin.
+
+    .. figure:: images/1.6.2.3Example.png
+      :name: Fig1.6.2.3
+
+    From this data is created image below. The x-axis represents phases in 
+    radians and the y-axis represents normalized mean value for each bin. The 
+    length of the line shows aproximation of width of each bin. The ticks 
+    represents boundaries for each bin.
+
+    .. figure:: images/1.6.2.4Example.png
+      :name: Fig1.6.2.4
+  
+    There are large mean values visible around the 0 radians, and also around 
+    0.5 pi radians, which is mainly affected by big amplitudes at the beginning 
+    and end of the signal (visible on second graph or as the outliers in third 
+    graph).
 
 - Phase locking value
 
-..
-  TODO
+  - The phase locking value (PLV) is phase-amplitude coupling feature and 
+    varies inside complex unit circle :math:`0 <= abs(PLV) <= 1`.
+    Based on article:
 
-- Powe spectral entropy
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
 
-..
-  TODO
+    the evaluating absolute value of output is recomended to use:
+
+    .. code-block:: py
+      :name: PLV1.7.0
+
+      np.abs(compute_plv_count(sig, fs))
+
+  - First of all, algorithm use Butterworth filter in lowband :math:`[4,8]` and
+    highband :math:`[80,150]` Hz. This 2 signals are then transformed by 
+    Hilbert transformation to complex signals.
+
+    Using euklidian formula as :math:`a + b*j = abs*exp(phi*j)`,we can 
+    extract phase1 from the lowband signal and amplitude from the highband 
+    signal. To the amplitude is then aplied hilbert transformation and from this
+    complex signal is extracted phase2.
+
+    The phases phase1 and phase2 are then subtracted element-wise as 
+    :math:`phase = phase1 - phase2` and are used to create phase locking signal 
+    (PLS) by formula :math:`PLS = exp(phase*j)`. All values from PLS lays on 
+    complex unit circle holding :math:`angle = phase` with oriented x axis.
+
+  - The PVL is calculated as: :math:`PVL = mean(np.exp(phase*j)) = mean(PLS)`, 
+    where phase is mentioned earlier and j is complex constant 
+    :math:`j^2 = -1`.
+
+  - Example
+
+    .. code-block:: py
+      :name: PLV-example1.7.1
+
+      #Example1
+      fs = 5000
+      x1=np.linspace(0*np.pi, 4*np.pi, num=10001)
+      sig=np.sin(20*x1)+np.sin(120*x1)*np.exp(-x1)
+      compute_plv_count(sig, fs=fs, lowband=[4, 8], highband=[80, 150])
+        >> 0.45569549961750905+0.01530084091583396j
+
+    .. figure:: images/1.7.1Example.png
+      :name: Fig1.7.1
+
+    In the picture, on the top left corner there is the signal filtered from 
+    the original signal with Butterworth filter in :math:`<4,8>` Hz band as the 
+    real signal and its Hilbert transformation as the imag signal. From this 
+    complex signal the phase1 is extracted.
+    In the second row of graphs on the left, there is amplitude of the Hilbert 
+    transforamation of signal filtere in signal in  :math:`80,150` Hz band as 
+    the real signal and its hilbert transformation as the imag sig. On the 
+    right side there is phase2 extracted from the signal on left.
+    In the third row, there is signal created by phase difference of phase1 and 
+    phase2, on left with its complex values and on right as simple 
+    :math:`phase1-phase2` difference.
+    The values of the third row are inserted into complex plane in the bottom 
+    of the picture as the blue stars, the more denser blue is, the more values 
+    lie on this part of unit circe. The mean is then calculated and displayed 
+    as orange vector.
+
+    The PLV in this example shows some phase locking around zero angle (also 
+    visible in the third row in values 6000-10000), but not the absolute phase 
+    locking because values 0-6000 does not show this coupling.
+    This picture is only for better understanding, the real data should never 
+    look like this.
+
+    Special example is the constant zero value. When all phase values are same.
+
+    .. code-block:: py
+      :name: PLV-example1.7.2
+
+      #Example1
+      fs = 5000
+      x1=np.linspace(0*np.pi, 4*np.pi, num=10001)
+      sig=x1*0
+      compute_plv_count(sig, fs=fs, lowband=[4, 8], highband=[80, 150])
+        >> 1+0j
+
+    .. figure:: images/1.7.2Example.png
+      :name: Fig1.7.2
+
+- Power spectral entropy
+
+  - The Power spectral entropy (PSE) varies in the interval 
+    :math:`(0,log2(length(sig))>`, where the log2 is logarithm with base 2 and 
+    length(sig) stands for the length of the input signal.
+
+  - The Power spectral entropy is normalized feature, so multiplication by 
+    constant would make no difference to the output.
+
+  - In the first step of the calculation, the Fast Fourier Transform (fft) of 
+    the input signal is calculated. This fft signal is squared element-wise as 
+    :math:`a_i := a_i^2`, where a_i is i-th element of the signal. Then the 
+    signal is normalized using :math:`p_i := a_i/sum(a)`, where sum(a) is sum 
+    of the elements of the signal. From normalized signal, the entropy H is 
+    calculated, using formula :math:`H = sum(p_i * log2(p_i))`, where log2 is 
+    the logarithm with base 2. The entropy H is returned as output of this 
+    function.
+
+  - Example
+
+    .. code-block:: py
+      :name: PLV-example1.8.1
+
+      #Example1
+      sig = np.ones(10001)
+      compute_pse(sig)
+        >> 2.65551518538626e-29
+
+    .. figure:: images/1.8.1.1Example.png
+      :name: Fig1.8.1.1
+
+    The original signal contains constant signal (not visible due to big scale) 
+    and its Fourier series which is big at the first element, but zero 
+    everywhere else.
+
+    .. figure:: images/1.8.1.2Example.png
+      :name: Fig1.8.1.2
+
+    The normalized fft signal differs from the unnormalized fft signal only by 
+    a different scale.
+    The ressult of the PSE in this case is 0 (with some numerical error).
+
+    .. code-block:: py
+      :name: PLV-example1.8.2
+
+      #Example2
+      sig = np.real(np.fft.ifft(np.ones(10001)))
+      compute_pse(sig)
+        >> 13.287856641838337
+      # np.log2(10001) = 13.287856641840545
+
+    Input signal is created to have constant Fourier transforamation. This 
+    signal should have the biggest PSE value, which is close to logarithm of 
+    lenght of input signal. However, this type of signal should not be usual 
+    at real signals.
+
+    .. figure:: images/1.8.2.1Example.png
+      :name: Fig1.8.2.1
+
+    This original signal has only one non-zero value at the beginning. And you 
+    can easily see that the Fourier transform of this signal has a constant 
+    value (with some calculation error).
+
+    .. figure:: images/1.8.2.2Example.png
+      :name: Fig1.8.2.2
+
+    .. code-block:: py
+      :name: PLV-example1.8.3
+
+      #Example3
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1
+      sig = np.sin(x1)
+      compute_pse(sig)
+        >> 1.0000036953163833
+
+    .. code-block:: py
+      :name: PLV-example1.8.3
+
+      #Example3
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 7*np.sin(x1)
+      compute_pse(sig)
+        >> 1.0000036953163833
+
+    .. code-block:: py
+      :name: PLV-example1.8.4
+
+      #Example4
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 7*np.sin(x1)
+      compute_pse(sig)
+        >> 1.0000036953163833
+
+      As you can see on example 3 and 4 above, scaling by multiplication does 
+      not change output, because the feature is normalized.
+
+      However, shifting on y-axis could cause some change as you can see on 
+      examples 5 and 6 below. Shift could increase or decrese  PSE value.
+
+    .. code-block:: py
+      :name: PLV-example1.8.5
+
+      #Example5
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 13+7*np.sin(x1)
+      compute_pse(sig)
+        >> 0.6746547357194002
+
+    .. code-block:: py
+      :name: PLV-example1.8.6
+
+      #Example6
+      length1 = 10001
+      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
+      sig = 3+7*np.sin(x1)
+      compute_pse(sig)
+        >> 1.5708852216530274
+
+    The difference in the output after shift is caused by change of first 
+    element of Fourier transformed signal. If the shift is much stronger than 
+    any other frequency, the output of PSE will be smaller. If the shift is 
+    similarly strong as other frequencies (elements of the Fourier transformed 
+    signal), the output of PSE should be bigger.
 
 - Sample entropy
 ..
@@ -380,12 +709,12 @@ of the brain.
     The coherence between two signals can be calculated with a time-lag. 
     Maximum time-lag should not exceed :math:`fmax/2`.
 
-  - Coh is calcualted by coherence method in scipy.signal as: 
+  - Coh is calculated by coherence method in scipy.signal as: 
     :math:`Coh(X,Y)=[|P(X,Y)|/(√(P(X,X)・P(Y,Y)))]`. 
     Where X,Y are the two evaluated signals, |・| stands for absolute value, 
     √ stands for square root, P(X,X) and P(Y,Y) stands for power spectral 
     density estimation and P(X,Y) stands for cross spectral density estimation.
-    The P(X,X) is calcualted as
+    The P(X,X) is calculated as
 
   - Lagged coherence is calculated (LagCoh) by coherence method in scipy.signal 
     as: :math:`LagCoh(X',Y)=[|P(X',Y)|/(√(P(X',X')・P(Y,Y)))]`.
@@ -780,7 +1109,7 @@ of the brain.
     represents signum function, <・> stands for mean, |・| stands for absolute 
     value and ΔΦ is a phase difference between two iEEG signals.
 
-  - PLI could be in general also calculaced without absolute value, then the sign 
+  - PLI could be in general also calculated without absolute value, then the sign 
     represents direction. This feature does not alow calculation of signed value.
 
   - Maximum time-lag should not exceed fmax/2. The maximum value of PLI is stored 
@@ -852,7 +1181,7 @@ of the brain.
         >> 0.5328774329300369 -15            # max_PLI, max_PLI_lag
 
       # Program takes the first biggest value with its time-lag value in samples.
-      # Program calculates only the absulute value of PLI
+      # Program calculates only the absolute value of PLI
 
     .. figure:: images/2.4.3Example.gif
       :name: Fig2.4.3
@@ -882,6 +1211,7 @@ of the brain.
     The :math:`PS -> 0` indicates the big diversity in signal frequency.
 
   - Examples
+
     .. code-block:: py
       :name: LinCorr-example2.5.1
 
@@ -1056,7 +1386,7 @@ of the brain.
     Transform, '*' is element-wise multiplication and ifft is Inverse
     Fast Fourier Transform and X,Y are the evaluated signals.
   
-    To convolved signal the Hilbert transforamation is aplied and from all
+    To convolved signal the Hilbert transformation is aplied and from all
     absolute values the mean and standart deviation is calculated. The mean and
     standart deviation are both calculated by numpy library, the Hilbert 
     transform is calculated by scipy.signal library.

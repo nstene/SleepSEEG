@@ -105,8 +105,8 @@ def test_mean_vector_length(create_testing_data, benchmark):
     compute_instance.run_windowed(create_testing_data,
                                   5000,
                                   n_cores=2)
-    assert isclose(res[0][0].real, 0.0028143270205255025, abs_tol=10e-6)
-    assert isclose(res[0][0].imag, -0.007199158327167037, abs_tol=10e-6)
+    assert isclose(res[0][0].real, 0.0005341996847015685, abs_tol=10e-6)
+    assert isclose(res[0][0].imag, -0.00143533153230829, abs_tol=10e-6)
 
 
 def test_phase_locking_value(create_testing_data, benchmark):
@@ -117,8 +117,8 @@ def test_phase_locking_value(create_testing_data, benchmark):
     compute_instance.run_windowed(create_testing_data,
                                   5000,
                                   n_cores=2)
-    assert isclose(res[0][0].real, 0.002708, abs_tol=10e-6)
-    assert isclose(res[0][0].imag, -0.007152732373542481, abs_tol=10e-6)
+    assert isclose(res[0][0].real, 0.003800756826940237, abs_tol=10e-6)
+    assert isclose(res[0][0].imag, -0.0071765065150767565, abs_tol=10e-6)
 
 
 def test_arr(create_testing_data, benchmark):
