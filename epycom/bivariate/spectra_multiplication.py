@@ -16,7 +16,7 @@ from scipy.signal import hilbert
 from ..utils.method import Method
 
 
-def compute_spect_multp(sig):
+def compute_spectra_multiplication(sig):
     """
     Multiply spectra of two time series and transforms it back to time domain,
     where the mean and std is calculated
@@ -70,4 +70,4 @@ class SpectraMultiplication(Method):
         Multiply spectra of two time series and transforms it back to time
         domain where the mean and std is calculated
         """
-        super().__init__(compute_spect_multp, **kwargs)
+        super().__init__(compute_spectra_multiplication, **kwargs)

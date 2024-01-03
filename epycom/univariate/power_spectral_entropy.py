@@ -14,7 +14,7 @@ import numpy as np
 from ..utils.method import Method
 
 
-def compute_pse(sig):
+def compute_power_spectral_entropy(sig):
     """
     Power spectral entropy
 
@@ -58,4 +58,4 @@ class PowerSpectralEntropy(Method):
             time series (float)
         """
 
-        super().__init__(compute_pse, **kwargs)
+        super().__init__(compute_power_spectral_entropy, **kwargs)
