@@ -48,7 +48,7 @@ class HjorthComplexity(Method):
 
     algorithm = 'HJORTH_COMPLEXITY'
     algorithm_type = 'univariate'
-    ersion = '1.0.0'
+    version = '1.0.0'
     dtype = [('hjorth_complexity', 'float32')]
 
     def __init__(self, **kwargs):
