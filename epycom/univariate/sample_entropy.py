@@ -109,10 +109,10 @@ class SampleEntropy(Method):
         ----------
         sig: np.ndarray
             1D signal
+        r: float64
+            filtering threshold, recommended values: (0.1-0.25)
         m: int
             window length of compared run of data, recommended (2-8)
-        r: float64
-            filtering threshold, recommended values: (0.1-0.25)*std
         """
 
         super().__init__(compute_sample_entropy, **kwargs)
