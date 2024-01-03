@@ -1,8 +1,9 @@
-# -*def- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
-
 
 # Std imports
 from math import isclose
