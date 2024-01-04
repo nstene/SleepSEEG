@@ -15,16 +15,17 @@ import scipy.signal as sp
 from ..utils.method import Method
 
 
-def compute_mi_count(data, nbins=18):
+def compute_mi_count(sig, nbins=18):
     """
-    Function to compute modulation index (MI) of given data
+    Function to compute modulation index (MI) of given signal
 
     Parameters
     ----------
-    data: numpy.ndarray
-        data from which MI is computed
+    sig: numpy.ndarray
+        signal from which MI is computed
     nbins: int
-        number of bins in which data will be separated, can affecct the result, default is 18
+        number of bins in which signal will be separated, can affecct the 
+        result, default is 18
 
     Returns
     -------
@@ -33,7 +34,7 @@ def compute_mi_count(data, nbins=18):
 
     Example
     -------
-    MI = compute_mi_count(data)
+    MI = compute_mi_count(sig)
 
     """
 
@@ -45,18 +46,16 @@ def compute_mi_count(data, nbins=18):
     for bins in range(0, nbins):
         position[bins] = -np.pi + bins * size
 
-    f_data = sp.hilbert(data)
-    ampl = np.abs(f_data)
-    ph = np.angle(f_data)
+    f_sig = sp.hilbert(sig)
+    ampl = np.abs(f_sig)
+    ph = np.angle(f_sig)
 
-    # Computing average amplitude
+    # Computing average amplitude in each bin
     for j in range(0, nbins):
-        phases1 = ampl[np.where(position[j] <= ph)]
-        phases2 = ampl[np.where(ph < position[j] + size)]
-        phases = np.intersect1d(phases1, phases2)
-        mean_amp[j] = np.mean(phases)
+        ampls = ampl[np.where((position[j] <= ph)&(ph < position[j] + size))]
+        mean_amp[j] = np.mean(ampls)
 
-    # Normalizing amplitude
+    # Normalizing amplitudes
     p = mean_amp / np.sum(mean_amp)
 
     # Computing Shannon entropy
@@ -65,6 +64,7 @@ def compute_mi_count(data, nbins=18):
     # Computing Kullback–Leibler distance
     KL = np.log(nbins) - H
 
+    # Final calculation of MI
     return KL / np.log(nbins)
 
 
@@ -72,7 +72,7 @@ class ModulationIndex(Method):
 
     algorithm = 'MODULATION_INDEX'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '1.0.1'
     dtype = [('mi', 'float32')]
 
     def __init__(self, **kwargs):
@@ -81,10 +81,11 @@ class ModulationIndex(Method):
 
         Parameters
         ----------
-        data: numpy.ndarray
-            data from which MI is computed
+        sig: numpy.ndarray
+            signal from which MI is computed
         nbins: int
-            number of bins in which data will be separated, can affecct the result, default is 18
+            number of bins in which signal will be separated, can affecct the 
+            result, default is 18
         """
 
         super().__init__(compute_mi_count, **kwargs)

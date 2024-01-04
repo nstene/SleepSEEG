@@ -15,29 +15,29 @@ import scipy.signal as sp
 from ..utils.method import Method
 
 
-def compute_plv_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
+def compute_plv_count(sig, fs=None, lowband=[4, 8], highband=[80, 150]):
     """
-    Function to compute phase-locking value (PLV) of given data
+    Function to compute phase-locking value (PLV) of given signal
 
     Parameters
     ----------
     fs: float64
         frequency
-    data: numpy.ndarray
-        data from which MI is computed
+    sig: numpy.ndarray
+        signal from which PLV is computed
     lowband: list
-            low frequency band boundaries [x, y], default [8, 12]
+            low frequency band boundaries [x, y], default [4, 8]
     highband: list
-            high frequency band boundaries [x, y], default [250, 600]
+            high frequency band boundaries [x, y], default [80, 150]
 
     Returns
     -------
-    MI: numpy.complex128
-        modulation index computed as KL/np.log(nbins)
+    PLV: numpy.complex128
+        phase-locking value computed as np.mean(np.exp(1j*(phase1-phase2)))
 
     Example
     -------
-    PLV = compute_plv_count(data, 5000.0)
+    PLV = compute_plv_count(sig, fs)
 
     """
 
@@ -48,10 +48,10 @@ def compute_plv_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
     highband = np.divide(highband, nyq)
 
     [b, a] = sp.butter(order, lowband, btype='bandpass', analog=False)
-    low = sp.filtfilt(b, a, data, axis=0)
+    low = sp.filtfilt(b, a, sig, axis=0)
 
     [b, a] = sp.butter(order, highband, btype='bandpass', analog=False)
-    high = sp.filtfilt(b, a, data, axis=0)
+    high = sp.filtfilt(b, a, sig, axis=0)
 
     # Extracting phase from the low frequency filtered analytic signal
     analytic_signal = sp.hilbert(low)
@@ -74,7 +74,7 @@ class PhaseLockingValue(Method):
 
     algorithm = 'PHASE_LOCKING_VALUE'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '1.1.0'
     dtype = [('plv', 'complex64')]
 
     def __init__(self, **kwargs):
@@ -85,8 +85,8 @@ class PhaseLockingValue(Method):
         ----------
         fs: float64
             frequency
-        data: numpy.ndarray
-            data from which MI is computed
+        sig: numpy.ndarray
+            signal from which PLV is computed
         lowband: list
                 low frequency band boundaries [x, y]
         highband: list

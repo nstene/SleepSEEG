@@ -32,17 +32,25 @@ def compute_hjorth_complexity(signal, fs=None):
 
     Example
     -------
-    hjorth_complexity = compute_hjorth_complexity(data, 5000)
+    hjorth_complexity = compute_hjorth_complexity(signal)
 
     Note
     ----
-    result is NOT frequency dependent
+    fs (sampling frequency) is left for backwards compatibility, but as was
+    shown, the ressult of Hjort complexity is not dependent on sampling
+    frequency of given signal
     """
+    variancex = np.var(signal)
+    if variancex == 0:
+        return float('NaN')
+    variancedx = np.var(np.diff(signal))
+    if variancedx == 0:
+        return float('NaN')
+    # if the variance of original signal is zero, the varianceddx would be also
+    # zero and division 0/0 is undefined
+    varianceddx = np.var(np.diff(signal, n=2))
 
-    mob = compute_hjorth_mobility(signal, fs)
-    # diff signal is one sample shorter
-    mobd = compute_hjorth_mobility(np.diff(signal) * fs, fs)
-    hjorth_complexity = mobd / mob
+    hjorth_complexity = np.sqrt(variancex*varianceddx)/variancedx
     return hjorth_complexity
 
 
@@ -64,7 +72,9 @@ class HjorthComplexity(Method):
 
         Note
         ----
-        result is NOT frequency dependent
+        fs (sampling frequency) is left for compatibility, but as was showed,
+        the ressult of Hjort complexity is not dependent on sampling frequency
+        of given signal
         """
 
         super().__init__(compute_hjorth_complexity, **kwargs)
