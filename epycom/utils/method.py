@@ -186,6 +186,7 @@ class Method:
 
             results = pool.map(self.compute, chunks)
             pool.close()
+            pool.terminate()
 
         if self.algorithm_type == 'event':
             results_sizes = np.empty(n_windows, np.int32)
