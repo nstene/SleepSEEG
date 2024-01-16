@@ -574,7 +574,7 @@ Univariate feature extraction
   - Example
 
     .. code-block:: py
-      :name: PLV-example1.8.1
+      :name: PSE-example1.8.1
 
       #Example1
       sig = np.ones(10001)
@@ -596,7 +596,7 @@ Univariate feature extraction
     The ressult of the PSE in this case is 0 (with some numerical error).
 
     .. code-block:: py
-      :name: PLV-example1.8.2
+      :name: PSE-example1.8.2
 
       #Example2
       sig = np.real(np.fft.ifft(np.ones(10001)))
@@ -620,7 +620,7 @@ Univariate feature extraction
       :name: Fig1.8.2.2
 
     .. code-block:: py
-      :name: PLV-example1.8.3
+      :name: PSE-example1.8.3
 
       #Example3
       length1 = 10001
@@ -630,7 +630,7 @@ Univariate feature extraction
         >> 1.0000036953163833
 
     .. code-block:: py
-      :name: PLV-example1.8.3
+      :name: PSE-example1.8.3
 
       #Example3
       length1 = 10001
@@ -640,7 +640,7 @@ Univariate feature extraction
         >> 1.0000036953163833
 
     .. code-block:: py
-      :name: PLV-example1.8.4
+      :name: PSE-example1.8.4
 
       #Example4
       length1 = 10001
@@ -656,7 +656,7 @@ Univariate feature extraction
       examples 5 and 6 below. Shift could increase or decrese  PSE value.
 
     .. code-block:: py
-      :name: PLV-example1.8.5
+      :name: PSE-example1.8.5
 
       #Example5
       length1 = 10001
@@ -666,7 +666,7 @@ Univariate feature extraction
         >> 0.6746547357194002
 
     .. code-block:: py
-      :name: PLV-example1.8.6
+      :name: PSE-example1.8.6
 
       #Example6
       length1 = 10001
@@ -682,8 +682,37 @@ Univariate feature extraction
     signal), the output of PSE should be bigger.
 
 - Sample entropy
-..
-  TODO
+
+  - The sample entropy (SE) feature estimates the entropy of a given signal.
+    SE varies in the interval 
+    :math:`(0,log((length(sig)-m)*(length(sig)-m-1))>`, where the log is 
+    natural logarithm length(sig) stands for the length of the input signal an 
+    m is the input parametr.
+
+  - The SE feature is dependent on sampling frequency of the signal and also 
+    length of the signal. Combining signals with different sampling frequencies, 
+    without careful consideration, is not recomended.
+
+  - The input parameters r and m are at default values set to :math:`r = 0.1` 
+    and :math:`m = 2`. R is relative distance constant and m is maximal length 
+    of subsequences. Calcualation of the SE begins by calculating the standard 
+    deviation of signal, which is multiplied by r. This constant will be the 
+    maximal distance parametr R.
+    
+    The main computation begins by creating all subsequences of m consecutive 
+    samples of original signal. For example, if the signal is 5001 samples long 
+    and :math:`m=8`, :math:`4994 = 5001-8+1` subsequences of length 8 are 
+    created.
+    Next step is to calculate Chebyshev distance (the biggest difference in 
+    absolute value) between all subsequences. If the distance between two 
+    vectors is less than R (calculated before), the 1 is added to B.
+
+    Same steps are used again, but only after adding +1 to m. The summed value 
+    is now stored in A. 
+    
+    A is always smaller than B. The final ressult is obtained by computing 
+    :math:`SE = -log(A/B)`, where log is natural logarithm.
+
 
 - Shannon entropy
 
