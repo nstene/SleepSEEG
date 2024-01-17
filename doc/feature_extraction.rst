@@ -398,7 +398,7 @@ Univariate feature extraction
     For each phase bin the mean of amplitudes is calculated. The next step is 
     normalization of amplitudes by 
     :math:`amp[i] := amp[i]/sum(amp[0:(nbins-1)]) `.From the obtained data the 
-    Shanon entropy (H) as :math:`H = -sum(amp*log(amp))`. From Shanon entropy 
+    Shannon entropy (H) as :math:`H = -sum(amp*log(amp))`. From Shannon entropy 
     the Kullback-Leibler distance (KL) is calculated as 
     :math:`Kl = log(nbins) - H`.  From Kullback-Leibler distance the final MI 
     calculation is computed as :math:`MI = KL/log(nbins)`.
@@ -716,11 +716,91 @@ Univariate feature extraction
 
 - Shannon entropy
 
-  - Shanon entropy (SHE) feature, calculating the shanon entropy of the signal.
-    SHE varies in the interval :math:`<0, log2(10)=3.321928094887362>`.
+  - Shannon entropy (SHE) feature, calculating the shannon entropy of the signal.
+    SHE varies in the interval :math:`(0, log2(10)=3.321928094887362>`.
 
-..
-  TODO
+  - Signal is separated to nbins = 10 equidistant bins. Number of bins cannot 
+    be changed in the input. Bins are normalized by formula 
+    :math:`p(i) = C(i)/sum(C)`, where C(i) is number of elements in the bin and 
+    sum(C) is length of the signal (or the sum of the elements in all bins). 
+    The shannon entropy is then calculated by 
+    :math:` SHE = -sum(p(i)*log(p(i)))`, where log is natural logarithm.
+
+  - Example
+
+    .. code-block:: py
+      :name: SHE-example1.10.1
+
+      #Example1
+      length1 = 5000 + 1
+      x1=np.linspace(0*np.pi, 2*np.pi, num=length1)
+      sig = np.sin(x1)
+      compute_shanon_entropy(sig)
+        >> 3.148995547001215
+
+    .. figure:: images/1.10.1.1Example.png
+      :name: Fig1.10.1.1
+
+    .. figure:: images/1.10.1.2Example.png
+      :name: Fig1.10.1.2
+
+    Shannon entropy is not dependent on scaling or moving on y-axis. As you can 
+    see on next example.
+
+    .. code-block:: py
+      :name: SHE-example1.10.2
+
+      #Example2
+      length1 = 5000 + 1
+      x1=np.linspace(0*np.pi, 2*np.pi, num=length1)
+      sig = 11+7*np.sin(x1)
+      compute_shanon_entropy(sig)
+        >> 3.148995547001215
+
+    .. figure:: images/1.10.2.1Example.png
+      :name: Fig1.10.2.1
+
+    .. figure:: images/1.10.2.2Example.png
+      :name: Fig1.10.2.2
+
+    The next example shows, that stacionary function have zero shannon entropy, 
+    because :math:`p(i)*log(p(i)) = 0`, for :math:`p(i)->0` and also for 
+    :math:`p(i) = 1` (:math:`log(1) = 0`).
+
+    .. code-block:: py
+      :name: SHE-example1.10.3
+
+      #Example3
+      length1 = 5000 + 1
+      sig = np.ones(length1)
+      compute_shanon_entropy(sig)
+        >> 0
+
+    .. figure:: images/1.10.3.1Example.png
+      :name: Fig1.10.3.1
+
+    .. figure:: images/1.10.3.2Example.png
+      :name: Fig1.10.3.2
+
+    The opposite is true for a signal with a homogeneous distribution, as in 
+    the next example. In this case, the Shannon entropy is :math:`log2(10)` 
+    with some rounding error.
+    
+    .. code-block:: py
+      :name: SHE-example1.10.4
+
+      #Example4
+      length1 = 5000 + 1
+      x1=np.linspace(0*np.pi, 2*np.pi, num=length1)
+      sig = x1
+      compute_shanon_entropy(sig)
+        >> 3.3219278354443875
+
+    .. figure:: images/1.10.4.1Example.png
+      :name: Fig1.10.4.1
+
+    .. figure:: images/1.10.4.2Example.png
+      :name: Fig1.10.4.2
 
 - Signal stats
 

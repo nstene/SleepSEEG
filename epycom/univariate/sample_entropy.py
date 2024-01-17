@@ -108,7 +108,7 @@ class SampleEntropy(Method):
         m: int
             window length of compared run of data, recommended (2-8)
         r: float64
-            filtering threshold, recommended values: (0.1-0.25)*std
+            filtering threshold, recommended values: (0.1-0.25)
         """
 
         super().__init__(compute_sample_entropy, **kwargs)
