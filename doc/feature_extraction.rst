@@ -716,6 +716,9 @@ Univariate feature extraction
 
 - Shannon entropy
 
+  - Shanon entropy (SHE) feature, calculating the shanon entropy of the signal.
+    SHE varies in the interval :math:`<0, log2(10)=3.321928094887362>`.
+
 ..
   TODO
 
