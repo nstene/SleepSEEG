@@ -804,6 +804,78 @@ Univariate feature extraction
 
 - Signal stats
 
+  - Signal stats are some of the basics functions used in statiscics.
+    In this case this feature returns standard deviation,mean, median, maximum, 
+    minimum, 25 percentil and 75 percentil. Important note is, all of these 
+    statistics are taken after the squared signal (element-wise) has been 
+    calculated.
+
+  - The output is dependent on position on y-axis, because of the second power. 
+    Using this feature with signals around 0 may not produce the expected 
+    results.
+
+  - power_std: standard deviation of power in band
+
+    - The standard deviation of the signal is calculated as 
+      :math:`STD = sqrt(sum((x(i)-m)^2)/N)`, where m is the mean of the 
+      signal, N is the number of samples (signal length), ^2 is the square, 
+      sqrt is the square root and x(i) are squared samples of the signal.
+  
+  - power_mean: mean of power in band
+
+    - The mean value of the signal is calculated as :math:`m = sum(x(i))/N`, 
+      where N is the number of samples (signal length) and x(i) are squared 
+      samples of the signal.
+
+  - power_median: median of power in band
+
+    - The power median of the signal is calculated as the value, where half 
+      of values of the signal are greater, than median value.
+
+  - power_max: max value of power in band
+
+    - The maximum signal value is the largest value in the signal. The value 
+      from which all other values are smaller.
+
+  - power_min: min value of power in band
+
+    - The maximum signal value is the largest value in the signal. The value 
+      from which all other values are smaller.
+
+  - power_perc25: 25 percentile of power in band
+
+    - The 25 percentile of the signal is calculated as the value where 25% of 
+      the signal values are smaller than the returned value.
+
+  - power_perc75: 75 percentile of power in band
+  
+    - The 75 percentile of the signal is calculated as the value where 75% of 
+      the signal values are smaller than the returned value.
+
+  - Example
+
+    .. code-block:: py
+      :name: SST-example1.11.1
+
+      #Example
+      length = 5000 + 1
+      x1=np.linspace(0.00, 2*np.pi, num=length)
+      sig=np.sin(x1)
+      print(compute_signal_stats(sig))   
+        >>0.3535887229607282, 0.4999000199960008, 0.5000000000000001, 1.0, 0.0, 
+          0.14644660940672616, 0.8535533905932737
+
+      # power_std, power_mean, power_median, power_max, power_min
+      # power_perc25, power_perc75
+
+    The mean and median do not represent the expected 0 because the second 
+    power changes all negative values to positive.
+
+    .. figure:: images/1.11.1Example.png
+      :name: Fig1.11.1
+
+    Power mean and power median have in this case similar values, so they could 
+    not be both vissible at the same time.
 
 Bivariate feature extraction
 *********************************
@@ -1140,11 +1212,11 @@ of the brain.
   - Although this feature is empirical, it has mathematical background.
     The 3 sigma rule says, for normal distribution 95 % of values are in the 
     interval :math:`<mean(・)-2*std(・), mean(・)+2*std(・)>`, where the std(・)
-    stands for standart deviation.
+    stands for standard deviation.
 
     Because all the values of PS lay in the interval :math:`(0,1>` and we 
     obtain again value from interval :math:`(0,1>`, the 3 sigma rule is 
-    modified with multiplication standart deviation by mean. Then only the
+    modified with multiplication standard deviation by mean. Then only the
     lower bound is used.
 
     In broad strokes, this feature pinpoint the value of PS above which are 
@@ -1179,7 +1251,7 @@ of the brain.
 
     In previous example are all phase synchrony values near 1 and although they
     are not normally distributed, PC returns value as they would be naturally 
-    distribudet with same mean and standart deviation.
+    distribudet with same mean and standard deviation.
 
     .. code-block:: py
       :name: PC-example2.4.2
@@ -1204,7 +1276,7 @@ of the brain.
 
     In previous example are all phase synchrony values distributed across the 
     whole interval and although they are not normally distributed, PC returns 
-    value as they would be naturally distributed with same mean and standart 
+    value as they would be naturally distributed with same mean and standard 
     deviation.
 
 - Phase lag index
@@ -1499,8 +1571,8 @@ of the brain.
     Fast Fourier Transform and X,Y are the evaluated signals.
   
     To convolved signal the Hilbert transformation is aplied and from all
-    absolute values the mean and standart deviation is calculated. The mean and
-    standart deviation are both calculated by numpy library, the Hilbert 
+    absolute values the mean and standard deviation is calculated. The mean and
+    standard deviation are both calculated by numpy library, the Hilbert 
     transform is calculated by scipy.signal library.
 
   - The Fast Fourier Transform (fft) approach is used, because on big dataset
