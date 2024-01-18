@@ -630,16 +630,6 @@ Univariate feature extraction
         >> 1.0000036953163833
 
     .. code-block:: py
-      :name: PSE-example1.8.3
-
-      #Example3
-      length1 = 10001
-      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
-      sig = 7*np.sin(x1)
-      compute_pse(sig)
-        >> 1.0000036953163833
-
-    .. code-block:: py
       :name: PSE-example1.8.4
 
       #Example4
