@@ -649,11 +649,11 @@ Univariate feature extraction
       compute_pse(sig)
         >> 1.0000036953163833
 
-      As you can see on example 3 and 4 above, scaling by multiplication does 
-      not change output, because the feature is normalized.
+    As you can see on example 3 and 4 above, scaling by multiplication does 
+    not change output, because the feature is normalized.
 
-      However, shifting on y-axis could cause some change as you can see on 
-      examples 5 and 6 below. Shift could increase or decrese  PSE value.
+    However, shifting on y-axis could cause some change as you can see on 
+    examples 5 and 6 below. Shift could increase or decrese  PSE value.
 
     .. code-block:: py
       :name: PSE-example1.8.5
@@ -848,7 +848,7 @@ Univariate feature extraction
       the signal values are smaller than the returned value.
 
   - power_perc75: 75 percentile of power in band
-  
+
     - The 75 percentile of the signal is calculated as the value where 75% of 
       the signal values are smaller than the returned value.
 
