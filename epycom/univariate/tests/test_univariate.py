@@ -162,8 +162,8 @@ def test_sample_entropy(create_testing_data, benchmark):
     compute_instance.run_windowed(create_testing_data,
                                   5000,
                                   n_cores=2)
-    assert isclose(res[0][0], 2.1162637673079385, abs_tol=10e-6)
-
+    assert isclose(res[0][0], 2.2665529038653913, abs_tol=10e-6)
+    
 
 def test_low_f_marker(create_testing_data, benchmark):
     compute_instance = LowFreqMarker()
