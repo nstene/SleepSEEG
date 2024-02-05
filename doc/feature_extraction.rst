@@ -276,8 +276,133 @@ Univariate feature extraction
 
 - Lyapunov exponent
 
-..
-  TODO
+  - The lyapunov exponent (LE) feature estimates chaos in the system. The 
+    rosenstein algorithm is used for the computation the of LE. 
+    A good approximation of the Lyapunov exponent (lambda) describes the distance 
+    between the trajectories :math:`X_(i+k)` and :math:`X_(j+k)` as 
+    :math:`c*exp(lambda*k)`. The vector X_j is the nearest neighbor of the vector 
+    X_i (using the Euclidean distance). The method of creating vectors will be 
+    described later. Of all the Lyapunov exponents, this algorithm finds only the 
+    largest one.  
+
+  - At the start of the calculation, the first important step is to choose 
+    right lag. Lag could be set on the input, for example:
+
+    .. code-block:: py
+      :name: LE-example1.4.0.1
+
+      compute_lyapunov_exponent(sig, sample_lag=500)
+      #compute lyapunov exponent with lag = 500 samples
+
+    Or, lag can be computed inside the feature by autocorelation.
+    The lag is calculated as the time delay between the starting point and the 
+    point where the autocorrelation drops to :math:`1-1/e (~ 0.6321)` of the 
+    initial value. Since the expected input signal is the EEG, the point of 
+    such autocorrelation is assumed to exist within the first second of the 
+    time series. Thus, it is important to set the sampling frequency into the 
+    input, otherwise it would be set to default value :mat:`fs = 5000`. This 
+    assumption is used to decrese the computational time.
+
+  - Another important parameter is the dimension. Rosenstein's work uses Takens 
+    criterion, :math:`dimension > 2*n`, where n is the number of state 
+    variables. However, according to Rosenstein, the algorithm could work in 
+    some cases without satisfying the Takens criterion. The default number of 
+    dimensions is set to 5.
+
+  - With this data, program starts with computing phase space. This step is 
+    done by _compute_phase_space function. This function uses signal, dimension 
+    and sample_lag.
+    This function returns space matrix, each column represents vector X_i, 
+    where i is the nuber of column in range 1 to 
+    :math:`length(signal) - (dimension-1)*lag`. Vector X_i is created as 
+    :math:`X_i = (x_i, x_{i+lag}, ..., x_{i+(dimension-1)*lag})`. The number of 
+    rows is dimension. The x_i stands for i-th value of the input signal.
+
+    So for example:
+
+    .. code-block:: py
+      :name: LE-example1.4.0.2
+
+      data = np.arange(100)
+      dimensions = 5
+      sample_lag = 10
+      _compute_phase_space(data, dimensions, sample_lag)
+      >> [[ 0.  1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14. 15. 16. 17.
+            18. 19. 20. 21. 22. 23. 24. 25. 26. 27. 28. 29. 30. 31. 32. 33. 34. 35.
+            36. 37. 38. 39. 40. 41. 42. 43. 44. 45. 46. 47. 48. 49. 50. 51. 52. 53.
+            54. 55. 56. 57. 58. 59.]
+          [10. 11. 12. 13. 14. 15. 16. 17. 18. 19. 20. 21. 22. 23. 24. 25. 26. 27.
+            28. 29. 30. 31. 32. 33. 34. 35. 36. 37. 38. 39. 40. 41. 42. 43. 44. 45.
+            46. 47. 48. 49. 50. 51. 52. 53. 54. 55. 56. 57. 58. 59. 60. 61. 62. 63.
+            64. 65. 66. 67. 68. 69.]
+          [20. 21. 22. 23. 24. 25. 26. 27. 28. 29. 30. 31. 32. 33. 34. 35. 36. 37.
+            38. 39. 40. 41. 42. 43. 44. 45. 46. 47. 48. 49. 50. 51. 52. 53. 54. 55.
+            56. 57. 58. 59. 60. 61. 62. 63. 64. 65. 66. 67. 68. 69. 70. 71. 72. 73.
+            74. 75. 76. 77. 78. 79.]
+          [30. 31. 32. 33. 34. 35. 36. 37. 38. 39. 40. 41. 42. 43. 44. 45. 46. 47.
+            48. 49. 50. 51. 52. 53. 54. 55. 56. 57. 58. 59. 60. 61. 62. 63. 64. 65.
+            66. 67. 68. 69. 70. 71. 72. 73. 74. 75. 76. 77. 78. 79. 80. 81. 82. 83.
+            84. 85. 86. 87. 88. 89.]
+          [40. 41. 42. 43. 44. 45. 46. 47. 48. 49. 50. 51. 52. 53. 54. 55. 56. 57.
+            58. 59. 60. 61. 62. 63. 64. 65. 66. 67. 68. 69. 70. 71. 72. 73. 74. 75.
+            76. 77. 78. 79. 80. 81. 82. 83. 84. 85. 86. 87. 88. 89. 90. 91. 92. 93.
+            94. 95. 96. 97. 98. 99.]]
+
+        #number orows is 5 (=dimension)
+        #number of columns is 60 = length(signal) - (dimension-1)*lag = 100-(5-1)*10
+
+    For further use in the computation it is important, to take vectors by 
+    columns. So everywhere this output will be used, it will need to be 
+    transposed.
+
+  - The function controls itself if the data length is long enough to allow the 
+    Lyapunov exponent to be calculated.
+
+  - Next step of the calculation is calculation of the nearest neighbor by 
+    calculating cross euclidian distance between all vectors. However, since 
+    the direct neighbor would probably have been the nearest, all distences 
+    between vectors closer than min_step will be set as a infinity. The 
+    min_step in samples is needed to be set in the input of the feature. The 
+    default vaule is 500 samples. Rosenstein claims the min_step should be 
+    greater, than mean period of the input signal.
+
+  - The main idea of Rosenstein algorithm is averaging the logarithmic values 
+    of the distances. This step needs trajectory_len variable, which is by 
+    default 20, but can be changed by user.
+    
+    From the distance matrix, it takes minimal distance value in every row. All 
+    chosen values are logaritmed and the mean value is calculated. Next we 
+    discard first row and add +1 to index of the nearest neighbor. The whole 
+    proces is repeated until trajectory_len number of values are obtained.
+
+    If this step fails to obtain any finite value, the -infinity is returned.
+
+  - When the main step is done, the valueas are associated with its index 
+    (index of the values, where mean value is not finite are skipped) and the 
+    polynom of the first order (straight line) is interleaved into using the 
+    least square method. The straight line could be mathematicly written as 
+    :math:`y = a*x + b`. The :math:`a*fs/lag_step` value is returned. Fs is the 
+    sampling fraquency and :math:`a` is a element of the mathematical expresion 
+    for a straight line.
+
+  - This description is highly reduced and focused on the aplicaton, for better 
+    understanding, it is recomended to read Rosenstein paper:
+    ROSENSTEIN, Michael T.; COLLINS, James J. a DE LUCA, Carlo J. A practical 
+    method for calculating largest Lyapunov exponents from small data sets. 
+    Online. Physica D: Nonlinear Phenomena. 1993, 117-134. ISSN 0167-2789. 
+    doi: https://doi.org/10.1016/0167-2789(93)90009-P.
+
+  - Example
+
+    .. code-block:: py
+        :name: LE-example1.4.1
+        
+        length1 = 5000 + 1
+        x1=np.linspace(0*np.pi, n*2*np.pi, num=length1)
+        sig = np.sin(x1)
+        compute_lyapunov_exponent(sig)
+
+        >> 1.5400895452210233e-05
 
 - Mean vector length
 
@@ -1498,7 +1623,7 @@ of the brain.
         >>6.323111682295058e-07           #REN  
 
       # Two different singals should not have relative entropy equal zero
-      # Two similar signals shoul have relativly low relative entropy value  
+      # Two similar signals should have relativly low relative entropy value  
       
     .. code-block:: py
       :name: LinCorr-example2.6.2
