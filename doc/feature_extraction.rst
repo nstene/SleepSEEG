@@ -377,16 +377,16 @@ Univariate feature extraction
 
     If this step fails to obtain any finite value, the -infinity is returned.
 
-  - When the main step is done, the valueas are associated with its index 
+  - When the main step is done, the values are associated with its index 
     (index of the values, where mean value is not finite are skipped) and the 
-    polynom of the first order (straight line) is interleaved into using the 
+    polynom of the first order (straight line) is interleaved into by the 
     least square method. The straight line could be mathematicly written as 
     :math:`y = a*x + b`. The :math:`a*fs/lag_step` value is returned. Fs is the 
     sampling fraquency and :math:`a` is a element of the mathematical expresion 
     for a straight line.
 
   - This description is highly reduced and focused on the aplicaton, for better 
-    understanding, it is recomended to read Rosenstein paper:
+    understanding, it is recomended to read original Rosenstein paper:
     ROSENSTEIN, Michael T.; COLLINS, James J. a DE LUCA, Carlo J. A practical 
     method for calculating largest Lyapunov exponents from small data sets. 
     Online. Physica D: Nonlinear Phenomena. 1993, 117-134. ISSN 0167-2789. 
