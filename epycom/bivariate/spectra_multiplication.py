@@ -61,6 +61,7 @@ class SpectraMultiplication(Method):
 
     algorithm = 'SPECTRA_MULTIPLICATION'
     algorithm_type = 'bivariate'
+    is_directional = False
     version = '1.0.0'
     dtype = [('sm_mean', 'float32'),
              ('sm_std', 'float32')]

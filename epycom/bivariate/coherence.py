@@ -100,6 +100,7 @@ class Coherence(Method):
 
     algorithm = 'COHERENCE'
     algorithm_type = 'bivariate'
+    is_directional = True
     version = '2.0.0'
     dtype = [('max_coh', 'float32'),
              ('k', 'int')]

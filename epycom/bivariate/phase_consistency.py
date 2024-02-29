@@ -82,6 +82,7 @@ class PhaseConsistency(Method):
 
     algorithm = 'PHASE_CONSISTENCY'
     algorithm_type = 'bivariate'
+    is_directional = True
     version = '1.0.0'
     dtype = [('phase_const', 'float32')]
 

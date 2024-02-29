@@ -62,6 +62,7 @@ class PhaseSynchrony(Method):
 
     algorithm = 'PHASE_SYNCHRONY'
     algorithm_type = 'bivariate'
+    is_directional = False
     version = '1.0.0'
     dtype = [('phase_sync', 'float32')]
 

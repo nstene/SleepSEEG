@@ -100,6 +100,7 @@ class LinearCorrelation(Method):
 
     algorithm = 'LINEAR_CORRELATION'
     algorithm_type = 'bivariate'
+    is_directional = True
     version = '2.0.0'
     dtype = [('max_corr', 'float32'),
              ('k', 'int')]

@@ -62,6 +62,7 @@ class RelativeEntropy(Method):
 
     algorithm = 'RELATIVE_ENTROPY'
     algorithm_type = 'bivariate'
+    is_directional = True
     version = '2.0.0'
     dtype = [('ren', 'float32')]
 
