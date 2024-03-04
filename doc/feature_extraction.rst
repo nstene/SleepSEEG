@@ -992,6 +992,36 @@ Univariate feature extraction
     Power mean and power median have in this case similar values, so they could 
     not be both vissible at the same time.
 
+- Multi scale entropy
+
+  - Multi scale entropy (MSE) is third in the row of the entropy features after 
+    Approximate entropy and Sample entropy.
+    Similarly to the sample entropy it varies in the interval
+    :math:`(0,log((length(sig)-m)*(length(sig)-m-1))>`, where the log is 
+    natural logarithm length(sig) stands for the length of the colapsed signal 
+    and m is the input parametr.
+
+  - The difference to the sample entropy is, that this feature could 
+    aprroximate entropy in another frequencies than the sample entropy, but the 
+    calculation is mor or less similar.
+    The only difference in the calculation is parametr scale (positive integer). 
+    If the parametr scale is equal to 1, the sample entropy is calculated.
+
+    If the scale is positive is another positive integer. Algorithm creates 
+    colapsed signal of length :math:`siglen // scale`, where sig len stands for 
+    length of original siganal and // is integer division.
+    The values of the new signal are calculated by averaging samles in length 
+    :math:`samples` as :math:`a_j  = sum(sig_{j*scale + i})/scale`, where i is 
+    from 0 to scale-1 and j is index up to length of new signal.
+
+    After this step, the SE of colapsed signal is calculated.
+
+  - Similarly to SE, the important note is, to calculate MSE with appropriate 
+    scale to the length of the signal and to sampling frequency. Signals of the 
+    same length and same MSE value, but obt by different sampling frequency and 
+    same scale would have different meaning.
+    
+
 Bivariate feature extraction
 *********************************
 Bivariate feature extraction algorithms server for calculating relationships 

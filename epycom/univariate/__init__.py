@@ -14,3 +14,4 @@ from .approximate_entropy import (compute_approximate_entropy,
                                   ApproximateEntropy)
 from .sample_entropy import compute_sample_entropy, SampleEntropy
 from .low_f_marker import compute_low_f_marker, LowFreqMarker
+from .multiscale_entropy import compute_multiscale_entropy, MultiscaleEntropy
