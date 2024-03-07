@@ -276,8 +276,133 @@ Univariate feature extraction
 
 - Lyapunov exponent
 
-..
-  TODO
+  - The lyapunov exponent (LE) feature estimates chaos in the system. The 
+    rosenstein algorithm is used for the computation the of LE. 
+    A good approximation of the Lyapunov exponent (lambda) describes the distance 
+    between the trajectories :math:`X_(i+k)` and :math:`X_(j+k)` as 
+    :math:`c*exp(lambda*k)`. The vector X_j is the nearest neighbor of the vector 
+    X_i (using the Euclidean distance). The method of creating vectors will be 
+    described later. Of all the Lyapunov exponents, this algorithm finds only the 
+    largest one.  
+
+  - At the start of the calculation, the first important step is to choose 
+    right lag. Lag could be set on the input, for example:
+
+    .. code-block:: py
+      :name: LE-example1.4.0.1
+
+      compute_lyapunov_exponent(sig, sample_lag=500)
+      #compute lyapunov exponent with lag = 500 samples
+
+    Or, lag can be computed inside the feature by autocorelation.
+    The lag is calculated as the time delay between the starting point and the 
+    point where the autocorrelation drops to :math:`1-1/e (~ 0.6321)` of the 
+    initial value. Since the expected input signal is the EEG, the point of 
+    such autocorrelation is assumed to exist within the first second of the 
+    time series. Thus, it is important to set the sampling frequency into the 
+    input, otherwise it would be set to default value :mat:`fs = 5000`. This 
+    assumption is used to decrese the computational time.
+
+  - Another important parameter is the dimension. Rosenstein's work uses Takens 
+    criterion, :math:`dimension > 2*n`, where n is the number of state 
+    variables. However, according to Rosenstein, the algorithm could work in 
+    some cases without satisfying the Takens criterion. The default number of 
+    dimensions is set to 5.
+
+  - With this data, program starts with computing phase space. This step is 
+    done by _compute_phase_space function. This function uses signal, dimension 
+    and sample_lag.
+    This function returns space matrix, each column represents vector X_i, 
+    where i is the nuber of column in range 1 to 
+    :math:`length(signal) - (dimension-1)*lag`. Vector X_i is created as 
+    :math:`X_i = (x_i, x_{i+lag}, ..., x_{i+(dimension-1)*lag})`. The number of 
+    rows is dimension. The x_i stands for i-th value of the input signal.
+
+    So for example:
+
+    .. code-block:: py
+      :name: LE-example1.4.0.2
+
+      data = np.arange(100)
+      dimensions = 5
+      sample_lag = 10
+      _compute_phase_space(data, dimensions, sample_lag)
+      >> [[ 0.  1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14. 15. 16. 17.
+            18. 19. 20. 21. 22. 23. 24. 25. 26. 27. 28. 29. 30. 31. 32. 33. 34. 35.
+            36. 37. 38. 39. 40. 41. 42. 43. 44. 45. 46. 47. 48. 49. 50. 51. 52. 53.
+            54. 55. 56. 57. 58. 59.]
+          [10. 11. 12. 13. 14. 15. 16. 17. 18. 19. 20. 21. 22. 23. 24. 25. 26. 27.
+            28. 29. 30. 31. 32. 33. 34. 35. 36. 37. 38. 39. 40. 41. 42. 43. 44. 45.
+            46. 47. 48. 49. 50. 51. 52. 53. 54. 55. 56. 57. 58. 59. 60. 61. 62. 63.
+            64. 65. 66. 67. 68. 69.]
+          [20. 21. 22. 23. 24. 25. 26. 27. 28. 29. 30. 31. 32. 33. 34. 35. 36. 37.
+            38. 39. 40. 41. 42. 43. 44. 45. 46. 47. 48. 49. 50. 51. 52. 53. 54. 55.
+            56. 57. 58. 59. 60. 61. 62. 63. 64. 65. 66. 67. 68. 69. 70. 71. 72. 73.
+            74. 75. 76. 77. 78. 79.]
+          [30. 31. 32. 33. 34. 35. 36. 37. 38. 39. 40. 41. 42. 43. 44. 45. 46. 47.
+            48. 49. 50. 51. 52. 53. 54. 55. 56. 57. 58. 59. 60. 61. 62. 63. 64. 65.
+            66. 67. 68. 69. 70. 71. 72. 73. 74. 75. 76. 77. 78. 79. 80. 81. 82. 83.
+            84. 85. 86. 87. 88. 89.]
+          [40. 41. 42. 43. 44. 45. 46. 47. 48. 49. 50. 51. 52. 53. 54. 55. 56. 57.
+            58. 59. 60. 61. 62. 63. 64. 65. 66. 67. 68. 69. 70. 71. 72. 73. 74. 75.
+            76. 77. 78. 79. 80. 81. 82. 83. 84. 85. 86. 87. 88. 89. 90. 91. 92. 93.
+            94. 95. 96. 97. 98. 99.]]
+
+        #number orows is 5 (=dimension)
+        #number of columns is 60 = length(signal) - (dimension-1)*lag = 100-(5-1)*10
+
+    For further use in the computation it is important, to take vectors by 
+    columns. So everywhere this output will be used, it will need to be 
+    transposed.
+
+  - The function controls itself if the data length is long enough to allow the 
+    Lyapunov exponent to be calculated.
+
+  - Next step of the calculation is calculation of the nearest neighbor by 
+    calculating cross euclidian distance between all vectors. However, since 
+    the direct neighbor would probably have been the nearest, all distences 
+    between vectors closer than min_step will be set as a infinity. The 
+    min_step in samples is needed to be set in the input of the feature. The 
+    default vaule is 500 samples. Rosenstein claims the min_step should be 
+    greater, than mean period of the input signal.
+
+  - The main idea of Rosenstein algorithm is averaging the logarithmic values 
+    of the distances. This step needs trajectory_len variable, which is by 
+    default 20, but can be changed by user.
+    
+    From the distance matrix, it takes minimal distance value in every row. All 
+    chosen values are logaritmed and the mean value is calculated. Next we 
+    discard first row and add +1 to index of the nearest neighbor. The whole 
+    proces is repeated until trajectory_len number of values are obtained.
+
+    If this step fails to obtain any finite value, the -infinity is returned.
+
+  - When the main step is done, the values are associated with its index 
+    (index of the values, where mean value is not finite are skipped) and the 
+    polynom of the first order (straight line) is interleaved into by the 
+    least square method. The straight line could be mathematicly written as 
+    :math:`y = a*x + b`. The :math:`a*fs/lag_step` value is returned. Fs is the 
+    sampling fraquency and :math:`a` is a element of the mathematical expresion 
+    for a straight line.
+
+  - This description is highly reduced and focused on the aplicaton, for better 
+    understanding, it is recomended to read original Rosenstein paper:
+    ROSENSTEIN, Michael T.; COLLINS, James J. a DE LUCA, Carlo J. A practical 
+    method for calculating largest Lyapunov exponents from small data sets. 
+    Online. Physica D: Nonlinear Phenomena. 1993, 117-134. ISSN 0167-2789. 
+    doi: https://doi.org/10.1016/0167-2789(93)90009-P.
+
+  - Example
+
+    .. code-block:: py
+        :name: LE-example1.4.1
+        
+        length1 = 5000 + 1
+        x1=np.linspace(0*np.pi, n*2*np.pi, num=length1)
+        sig = np.sin(x1)
+        compute_lyapunov_exponent(sig)
+
+        >> 1.5400895452210233e-05
 
 - Mean vector length
 
@@ -574,7 +699,7 @@ Univariate feature extraction
   - Example
 
     .. code-block:: py
-      :name: PLV-example1.8.1
+      :name: PSE-example1.8.1
 
       #Example1
       sig = np.ones(10001)
@@ -596,7 +721,7 @@ Univariate feature extraction
     The result of the PSE in this case is 0 (with some numerical error).
 
     .. code-block:: py
-      :name: PLV-example1.8.2
+      :name: PSE-example1.8.2
 
       #Example2
       sig = np.real(np.fft.ifft(np.ones(10001)))
@@ -620,7 +745,7 @@ Univariate feature extraction
       :name: Fig1.8.2.2
 
     .. code-block:: py
-      :name: PLV-example1.8.3
+      :name: PSE-example1.8.3
 
       #Example3
       length1 = 10001
@@ -630,17 +755,7 @@ Univariate feature extraction
         >> 1.0000036953163833
 
     .. code-block:: py
-      :name: PLV-example1.8.3
-
-      #Example3
-      length1 = 10001
-      x1=np.linspace(0*np.pi, 4*np.pi, num=length1)
-      sig = 7*np.sin(x1)
-      compute_pse(sig)
-        >> 1.0000036953163833
-
-    .. code-block:: py
-      :name: PLV-example1.8.4
+      :name: PSE-example1.8.4
 
       #Example4
       length1 = 10001
@@ -656,7 +771,7 @@ Univariate feature extraction
       examples 5 and 6 below. Shift could increase or decrease PSE value.
 
     .. code-block:: py
-      :name: PLV-example1.8.5
+      :name: PSE-example1.8.5
 
       #Example5
       length1 = 10001
@@ -666,7 +781,7 @@ Univariate feature extraction
         >> 0.6746547357194002
 
     .. code-block:: py
-      :name: PLV-example1.8.6
+      :name: PSE-example1.8.6
 
       #Example6
       length1 = 10001
@@ -682,16 +797,230 @@ Univariate feature extraction
     signal), the output of PSE should be bigger.
 
 - Sample entropy
-..
-  TODO
+
+  - The sample entropy (SE) feature estimates the entropy of a given signal.
+    SE varies in the interval 
+    :math:`(0,log((length(sig)-m)*(length(sig)-m-1))>`, where the log is 
+    natural logarithm length(sig) stands for the length of the input signal an 
+    m is the input parametr.
+
+  - The SE feature is dependent on sampling frequency of the signal and also 
+    length of the signal. Combining signals with different sampling frequencies, 
+    without careful consideration, is not recomended.
+
+  - The input parameters r and m are at default values set to :math:`r = 0.1` 
+    and :math:`m = 2`. R is relative distance constant and m is maximal length 
+    of subsequences. Calcualation of the SE begins by calculating the standard 
+    deviation of signal, which is multiplied by r. This constant will be the 
+    maximal distance parametr R.
+    
+    The main computation begins by creating all subsequences of m consecutive 
+    samples of original signal. For example, if the signal is 5001 samples long 
+    and :math:`m=8`, :math:`4994 = 5001-8+1` subsequences of length 8 are 
+    created.
+    Next step is to calculate Chebyshev distance (the biggest difference in 
+    absolute value) between all subsequences. If the distance between two 
+    vectors is less than R (calculated before), the 1 is added to B.
+
+    Same steps are used again, but only after adding +1 to m. The summed value 
+    is now stored in A. 
+    
+    A is always smaller than B. The final ressult is obtained by computing 
+    :math:`SE = -log(A/B)`, where log is natural logarithm.
+
 
 - Shannon entropy
 
-..
-  TODO
+  - Shannon entropy (SHE) feature, calculating the shannon entropy of the signal.
+    SHE varies in the interval :math:`(0, log2(10)=3.321928094887362>`.
+
+  - Signal is separated to nbins = 10 equidistant bins. Number of bins cannot 
+    be changed in the input. Bins are normalized by formula 
+    :math:`p(i) = C(i)/sum(C)`, where C(i) is number of elements in the bin and 
+    sum(C) is length of the signal (or the sum of the elements in all bins). 
+    The shannon entropy is then calculated by 
+    :math:` SHE = -sum(p(i)*log(p(i)))`, where log is natural logarithm.
+
+  - Example
+
+    .. code-block:: py
+      :name: SHE-example1.10.1
+
+      #Example1
+      length1 = 5000 + 1
+      x1=np.linspace(0*np.pi, 2*np.pi, num=length1)
+      sig = np.sin(x1)
+      compute_shanon_entropy(sig)
+        >> 3.148995547001215
+
+    .. figure:: images/1.10.1.1Example.png
+      :name: Fig1.10.1.1
+
+    .. figure:: images/1.10.1.2Example.png
+      :name: Fig1.10.1.2
+
+    Shannon entropy is not dependent on scaling or moving on y-axis. As you can 
+    see on next example.
+
+    .. code-block:: py
+      :name: SHE-example1.10.2
+
+      #Example2
+      length1 = 5000 + 1
+      x1=np.linspace(0*np.pi, 2*np.pi, num=length1)
+      sig = 11+7*np.sin(x1)
+      compute_shanon_entropy(sig)
+        >> 3.148995547001215
+
+    .. figure:: images/1.10.2.1Example.png
+      :name: Fig1.10.2.1
+
+    .. figure:: images/1.10.2.2Example.png
+      :name: Fig1.10.2.2
+
+    The next example shows, that stacionary function have zero shannon entropy, 
+    because :math:`p(i)*log(p(i)) = 0`, for :math:`p(i)->0` and also for 
+    :math:`p(i) = 1` (:math:`log(1) = 0`).
+
+    .. code-block:: py
+      :name: SHE-example1.10.3
+
+      #Example3
+      length1 = 5000 + 1
+      sig = np.ones(length1)
+      compute_shanon_entropy(sig)
+        >> 0
+
+    .. figure:: images/1.10.3.1Example.png
+      :name: Fig1.10.3.1
+
+    .. figure:: images/1.10.3.2Example.png
+      :name: Fig1.10.3.2
+
+    The opposite is true for a signal with a homogeneous distribution, as in 
+    the next example. In this case, the Shannon entropy is :math:`log2(10)` 
+    with some rounding error.
+    
+    .. code-block:: py
+      :name: SHE-example1.10.4
+
+      #Example4
+      length1 = 5000 + 1
+      x1=np.linspace(0*np.pi, 2*np.pi, num=length1)
+      sig = x1
+      compute_shanon_entropy(sig)
+        >> 3.3219278354443875
+
+    .. figure:: images/1.10.4.1Example.png
+      :name: Fig1.10.4.1
+
+    .. figure:: images/1.10.4.2Example.png
+      :name: Fig1.10.4.2
 
 - Signal stats
 
+  - Signal stats are some of the basics functions used in statiscics.
+    In this case this feature returns standard deviation,mean, median, maximum, 
+    minimum, 25 percentil and 75 percentil. Important note is, all of these 
+    statistics are taken after the squared signal (element-wise) has been 
+    calculated.
+
+  - The output is dependent on position on y-axis, because of the second power. 
+    Using this feature with signals around 0 may not produce the expected 
+    results.
+
+  - power_std: standard deviation of power in band
+
+    - The standard deviation of the signal is calculated as 
+      :math:`STD = sqrt(sum((x(i)-m)^2)/N)`, where m is the mean of the 
+      signal, N is the number of samples (signal length), ^2 is the square, 
+      sqrt is the square root and x(i) are squared samples of the signal.
+  
+  - power_mean: mean of power in band
+
+    - The mean value of the signal is calculated as :math:`m = sum(x(i))/N`, 
+      where N is the number of samples (signal length) and x(i) are squared 
+      samples of the signal.
+
+  - power_median: median of power in band
+
+    - The power median of the signal is calculated as the value, where half 
+      of values of the signal are greater, than median value.
+
+  - power_max: max value of power in band
+
+    - The maximum signal value is the largest value in the signal. The value 
+      from which all other values are smaller.
+
+  - power_min: min value of power in band
+
+    - The maximum signal value is the largest value in the signal. The value 
+      from which all other values are smaller.
+
+  - power_perc25: 25 percentile of power in band
+
+    - The 25 percentile of the signal is calculated as the value where 25% of 
+      the signal values are smaller than the returned value.
+
+  - power_perc75: 75 percentile of power in band
+
+    - The 75 percentile of the signal is calculated as the value where 75% of 
+      the signal values are smaller than the returned value.
+
+  - Example
+
+    .. code-block:: py
+      :name: SST-example1.11.1
+
+      #Example
+      length = 5000 + 1
+      x1=np.linspace(0.00, 2*np.pi, num=length)
+      sig=np.sin(x1)
+      print(compute_signal_stats(sig))   
+        >>0.3535887229607282, 0.4999000199960008, 0.5000000000000001, 1.0, 0.0, 
+          0.14644660940672616, 0.8535533905932737
+
+      # power_std, power_mean, power_median, power_max, power_min
+      # power_perc25, power_perc75
+
+    The mean and median do not represent the expected 0 because the second 
+    power changes all negative values to positive.
+
+    .. figure:: images/1.11.1Example.png
+      :name: Fig1.11.1
+
+    Power mean and power median have in this case similar values, so they could 
+    not be both vissible at the same time.
+
+- Multi scale entropy
+
+  - Multi scale entropy (MSE) is third in the row of the entropy features after 
+    Approximate entropy and Sample entropy.
+    Similarly to the sample entropy it varies in the interval
+    :math:`(0,log((length(sig)-m)*(length(sig)-m-1))>`, where the log is 
+    natural logarithm length(sig) stands for the length of the colapsed signal 
+    and m is the input parametr.
+
+  - The difference to the sample entropy is, that this feature could 
+    aprroximate entropy in another frequencies than the sample entropy, but the 
+    calculation is mor or less similar.
+    The only difference in the calculation is parametr scale (positive integer). 
+    If the parametr scale is equal to 1, the sample entropy is calculated.
+
+    If the scale is positive is another positive integer. Algorithm creates 
+    colapsed signal of length :math:`siglen // scale`, where sig len stands for 
+    length of original siganal and // is integer division.
+    The values of the new signal are calculated by averaging samles in length 
+    :math:`samples` as :math:`a_j  = sum(sig_{j*scale + i})/scale`, where i is 
+    from 0 to scale-1 and j is index up to length of new signal.
+
+    After this step, the SE of colapsed signal is calculated.
+
+  - Similarly to SE, the important note is, to calculate MSE with appropriate 
+    scale to the length of the signal and to sampling frequency. Signals of the 
+    same length and same MSE value, but obt by different sampling frequency and 
+    same scale would have different meaning.
+    
 
 Bivariate feature extraction
 *********************************

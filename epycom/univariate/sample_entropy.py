@@ -35,38 +35,34 @@ def _maxdist(x_i, x_j):
 @njit('f8(f8[:], f8, i8)', cache=True)
 def _compute_sample_entropy(sig, r, m):
     N = sig.shape[0]
-    r = r*np.nanstd(sig)
+    R = r*np.nanstd(sig)
     xlen = N - m
-    x = np.full((xlen, m), np.inf, dtype='float64')
-    for i in range(N - m):
-        x[i] = sig[i: i + m]
 
+    # Preparing vectors x_B, for calculating denominator
     x_B = np.full((xlen + 1, m), np.inf, dtype='float64')
     for i in range(xlen + 1):
         x_B[i] = sig[i: i + m]
 
-    # Save all matches minus the self-match, compute B
-    B = cnt = 0
-    for x_i in x:
-        for x_j in x_B:
-            if _maxdist(x_i, x_j) <= r:
-                cnt += 1
-        B += cnt-1
-        cnt = 0
+    # Save all matches, compute B
+    B = 0
+    lenB = len(x_B)
+    for i in range(lenB):
+        for j in range(i+1, lenB):
+            if _maxdist(x_B[i], x_B[j]) <= R:
+                B += 1
 
-    # Similar for computing A
+    # Same for computing nominator A, now with m +=1
     m += 1
     x_A = np.full((N - m + 1, m), np.inf, dtype='float64')
     for i in range(N - m + 1):
         x_A[i] = sig[i: i + m]
 
-    A = cnt = 0
-    for x_i in x_A:
-        for x_j in x_A:
-            if _maxdist(x_i, x_j) <= r:
-                cnt += 1
-        A += cnt - 1
-        cnt = 0
+    A = 0
+    lenA = len(x_A)
+    for i in range(lenA):
+        for j in range(i+1, lenA):
+            if _maxdist(x_A[i], x_A[j]) <= R:
+                A += 1
 
     return -np.log(A / B)
 
@@ -100,7 +96,7 @@ class SampleEntropy(Method):
 
     algorithm = 'SAMPLE_ENTROPY'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '1.1.0'
     dtype = [('sampen', 'float32')]
 
     def __init__(self, **kwargs):
@@ -115,6 +111,8 @@ class SampleEntropy(Method):
             filtering threshold, recommended values: (0.1-0.25)
         m: int
             window length of compared run of data, recommended (2-8)
+        r: float64
+            filtering threshold, recommended values: (0.1-0.25)
         """
 
         super().__init__(compute_sample_entropy, **kwargs)

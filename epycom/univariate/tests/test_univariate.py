@@ -25,7 +25,8 @@ from epycom.univariate import (SignalStats,
                                ShannonEntropy,
                                ApproximateEntropy,
                                SampleEntropy, 
-                               LowFreqMarker
+                               LowFreqMarker,
+                               Multiscale_Entropy
                                )
 
 
@@ -141,7 +142,7 @@ def test_shannon_entropy(create_testing_data, benchmark):
     compute_instance.run_windowed(create_testing_data,
                                   5000,
                                   n_cores=2)
-    assert isclose(res[0][0], 15.609560, abs_tol=10e-6)
+    assert isclose(res[0][0], 2.5231089015779533, abs_tol=10e-6)
 
 
 def test_approximate_entropy(create_testing_data, benchmark):
@@ -163,8 +164,8 @@ def test_sample_entropy(create_testing_data, benchmark):
     compute_instance.run_windowed(create_testing_data,
                                   5000,
                                   n_cores=2)
-    assert isclose(res[0][0], 2.2664018, abs_tol=10e-6)
-
+    assert isclose(res[0][0], 2.2665529038653913, abs_tol=10e-6)
+    
 
 def test_low_f_marker(create_testing_data, benchmark):
     compute_instance = LowFreqMarker()
@@ -177,3 +178,13 @@ def test_low_f_marker(create_testing_data, benchmark):
                                   n_cores=2)
 
     assert isclose(res[0][0],  0.4149408406426963, abs_tol=10e-6)
+
+def test_multiscale_entropy(create_testing_data, benchmark):
+    compute_instance = MultiscaleEntropy()
+    res = benchmark(compute_instance.run_windowed,
+                    create_testing_data,
+                    50000)
+    compute_instance.run_windowed(create_testing_data,
+                                  50000,
+                                  n_cores=2)
+    assert isclose(res[0][0], 2.0149070428176254, abs_tol=10e-6)

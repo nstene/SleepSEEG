@@ -8,8 +8,8 @@
 # Std imports
 
 # Third pary imports
-import pandas as pd
 from scipy import stats as stats
+import numpy as np
 
 # Local imports
 from ..utils.method import Method
@@ -29,9 +29,9 @@ def compute_shanon_entropy(sig):
     entro: np.float64
         Computed Shannon entropy of given signal
     """
-    pd_series = pd.Series(sig)
-    counts = pd_series.value_counts()
-    entro = stats.entropy(counts, base=2)               # shan_en = -sum(p(xi)*log(p(xi)))
+    nbins = 10
+    counts = np.histogram(sig,nbins)
+    entro = stats.entropy(counts[0], base=2)               # shan_en = -sum(p(xi)*log(p(xi)))
     return entro
 
 
@@ -39,7 +39,7 @@ class ShannonEntropy(Method):
 
     algorithm = 'SHANNON_ENTROPY'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '2.0.0'
     dtype = [('shannon', 'float32')]
 
     def __init__(self, **kwargs):
