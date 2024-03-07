@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 
@@ -41,6 +43,9 @@ def compute_relative_entropy(sig):
     if sig.ndim != 2:
         raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
 
+    # Protection against numpy bug https://github.com/numpy/numpy/issues/12435
+    sig = sig.astype('float32')
+
     # OPTIMIZE - check if we can do this in one array
     h1 = np.histogram(sig[0], 10)
     h2 = np.histogram(sig[1], 10)
@@ -57,6 +62,7 @@ class RelativeEntropy(Method):
 
     algorithm = 'RELATIVE_ENTROPY'
     algorithm_type = 'bivariate'
+    is_directional = True
     version = '2.0.0'
     dtype = [('ren', 'float32')]
 

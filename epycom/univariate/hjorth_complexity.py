@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 # Std imports
@@ -34,8 +36,8 @@ def compute_hjorth_complexity(signal, fs=None):
 
     Note
     ----
-    fs (sampling frequency) is left for backwards compatibility, but as was 
-    shown, the ressult of Hjort complexity is not dependent on sampling 
+    fs (sampling frequency) is left for backwards compatibility, but as was
+    shown, the ressult of Hjort complexity is not dependent on sampling
     frequency of given signal
     """
     variancex = np.var(signal)
@@ -44,7 +46,7 @@ def compute_hjorth_complexity(signal, fs=None):
     variancedx = np.var(np.diff(signal))
     if variancedx == 0:
         return float('NaN')
-    # if the variance of original signal is zero, the varianceddx would be also 
+    # if the variance of original signal is zero, the varianceddx would be also
     # zero and division 0/0 is undefined
     varianceddx = np.var(np.diff(signal, n=2))
 
@@ -56,7 +58,7 @@ class HjorthComplexity(Method):
 
     algorithm = 'HJORTH_COMPLEXITY'
     algorithm_type = 'univariate'
-    ersion = '1.0.1'
+    version = '1.0.0'
     dtype = [('hjorth_complexity', 'float32')]
 
     def __init__(self, **kwargs):
@@ -70,8 +72,8 @@ class HjorthComplexity(Method):
 
         Note
         ----
-        fs (sampling frequency) is left for compatibility, but as was showed, 
-        the ressult of Hjort complexity is not dependent on sampling frequency 
+        fs (sampling frequency) is left for compatibility, but as was showed,
+        the ressult of Hjort complexity is not dependent on sampling frequency
         of given signal
         """
 

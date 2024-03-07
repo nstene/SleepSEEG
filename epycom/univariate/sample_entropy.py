@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 # Third party imports
@@ -105,6 +107,8 @@ class SampleEntropy(Method):
         ----------
         sig: np.ndarray
             1D signal
+        r: float64
+            filtering threshold, recommended values: (0.1-0.25)
         m: int
             window length of compared run of data, recommended (2-8)
         r: float64
