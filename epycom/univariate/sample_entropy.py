@@ -5,6 +5,9 @@
 # Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
+# Std imports
+import warnings
+
 # Third party imports
 import numpy as np
 from numba import njit
@@ -88,6 +91,12 @@ def compute_sample_entropy(sig, r=0.1, m=2):
        -------
        sample_entropy = compute_sample_entropy(data, 0.1, 2)
     """
+
+    # Check the length of the signal with regard to m
+    if len(sig) < 100:
+        warnings.warn(RuntimeWarning,
+                      """The length of the signal is smaller than 400
+                       the result might not make sense""")
 
     return _compute_sample_entropy(sig.astype(float), float(r), int(m))
 
