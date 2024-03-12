@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 
@@ -65,8 +67,8 @@ def compute_phase_const(sig, lag=500, lag_step=50):
         sig1_w = sig[0][ind1:ind2]
         sig2_w = sig[1][ind1:ind2]
 
-        sig1_ph = np.unwrap(np.angle(hilbert(sig1_w)))
-        sig2_ph = np.unwrap(np.angle(hilbert(sig2_w)))
+        sig1_ph = np.angle(hilbert(sig1_w))
+        sig2_ph = np.angle(hilbert(sig2_w))
         ph_12 = sig1_ph - sig2_ph
         phs_sync_temp.append(
             np.sqrt(np.mean(np.cos(ph_12))**2 + np.mean(np.sin(ph_12))**2))
@@ -80,6 +82,7 @@ class PhaseConsistency(Method):
 
     algorithm = 'PHASE_CONSISTENCY'
     algorithm_type = 'bivariate'
+    is_directional = True
     version = '1.0.0'
     dtype = [('phase_const', 'float32')]
 

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 
@@ -102,7 +104,7 @@ def _band_filter(arg):
     cc[idx] = np.nan
 
     df = pd.DataFrame(cc)
-    df = df.fillna(method='bfill')
+    df = df.bfill()
     out = np.array(df)
     out[np.where(np.diff(out.T[0]) > 0)[0]+1] = 0
 

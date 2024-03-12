@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
-# Third pary imports
+# Std imports
+import warnings
+
+# Third party imports
 import numpy as np
 from numba import njit
 
@@ -31,7 +36,40 @@ def _maxdist(x_i, x_j):
 
 
 @njit('f8(f8[:], f8, i8)', cache=True)
-def compute_sample_entropy(sig, r, m):
+def _compute_sample_entropy(sig, r, m):
+    N = sig.shape[0]
+    R = r*np.nanstd(sig)
+    xlen = N - m
+
+    # Preparing vectors x_B, for calculating denominator
+    x_B = np.full((xlen + 1, m), np.inf, dtype='float64')
+    for i in range(xlen + 1):
+        x_B[i] = sig[i: i + m]
+
+    # Save all matches, compute B
+    B = 0
+    lenB = len(x_B)
+    for i in range(lenB):
+        for j in range(i+1, lenB):
+            if _maxdist(x_B[i], x_B[j]) <= R:
+                B += 1
+
+    # Same for computing nominator A, now with m +=1
+    m += 1
+    x_A = np.full((N - m + 1, m), np.inf, dtype='float64')
+    for i in range(N - m + 1):
+        x_A[i] = sig[i: i + m]
+
+    A = 0
+    lenA = len(x_A)
+    for i in range(lenA):
+        for j in range(i+1, lenA):
+            if _maxdist(x_A[i], x_A[j]) <= R:
+                A += 1
+
+    return -np.log(A / B)
+
+def compute_sample_entropy(sig, r=0.1, m=2):
     """
        Function to compute sample entropy
 
@@ -40,7 +78,7 @@ def compute_sample_entropy(sig, r, m):
        sig: np.ndarray
            1D signal
        r: np.float64
-           filtering treshold, recommended values: (0.1-0.25)*np.nanstd(sig)
+           filtering threshold, recommended values: 0.1-0.25
        m: int
            window length of compared run of data, recommended (2-8)
 
@@ -51,50 +89,23 @@ def compute_sample_entropy(sig, r, m):
 
        Example
        -------
-       sample_entropy = approximate_entropy(data, 0.1*np.nanstd(data))
+       sample_entropy = compute_sample_entropy(data, 0.1, 2)
     """
-    N = sig.shape[0]
 
-    xlen = N - m
-    x = np.full((xlen, m), np.inf, dtype='float64')
-    for i in range(N - m):
-        x[i] = sig[i: i + m]
+    # Check the length of the signal with regard to m
+    if len(sig) < 10**m:
+        warnings.warn(RuntimeWarning,
+                       f"""The length of the signal is smaller than 10**m
+                       ({len(sig)}) the result might not make sense""")
 
-    x_B = np.full((xlen + 1, m), np.inf, dtype='float64')
-    for i in range(xlen + 1):
-        x_B[i] = sig[i: i + m]
-
-    # Save all matches minus the self-match, compute B
-    B = cnt = 0
-    for x_i in x:
-        for x_j in x_B:
-            if _maxdist(x_i, x_j) <= r:
-                cnt += 1
-        B += cnt-1
-        cnt = 0
-
-    # Similar for computing A
-    m += 1
-    x_A = np.full((N - m + 1, m), np.inf, dtype='float64')
-    for i in range(N - m + 1):
-        x_A[i] = sig[i: i + m]
-
-    A = cnt = 0
-    for x_i in x_A:
-        for x_j in x_A:
-            if _maxdist(x_i, x_j) <= r:
-                cnt += 1
-        A += cnt - 1
-        cnt = 0
-
-    return -np.log(A / B)
+    return _compute_sample_entropy(sig.astype(float), float(r), int(m))
 
 
 class SampleEntropy(Method):
 
     algorithm = 'SAMPLE_ENTROPY'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '1.1.0'
     dtype = [('sampen', 'float32')]
 
     def __init__(self, **kwargs):
@@ -105,10 +116,12 @@ class SampleEntropy(Method):
         ----------
         sig: np.ndarray
             1D signal
+        r: float64
+            filtering threshold, recommended values: (0.1-0.25)
         m: int
             window length of compared run of data, recommended (2-8)
         r: float64
-            filtering treshold, recommended values: (0.1-0.25)*std
+            filtering threshold, recommended values: (0.1-0.25)
         """
 
         super().__init__(compute_sample_entropy, **kwargs)

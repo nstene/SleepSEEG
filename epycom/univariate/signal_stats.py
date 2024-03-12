@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 # Std imports
@@ -18,7 +20,7 @@ def compute_signal_stats(sig):
     """
     Function to analyze basic signal statistics
 
-    Parameters:
+    Parameters
     ----------
     sig: np.array
         signal to analyze, time series (array, int, float)
@@ -34,8 +36,8 @@ def compute_signal_stats(sig):
         - power_perc25: 25 percentile of power in band
         - power_perc75: 75 percentile of power in band
 
-    Example
-    -------
+    Example:
+    --------
     sig_stats = compute_signal_stats(sig)
     """
 
@@ -74,7 +76,7 @@ class SignalStats(Method):
         """
         Class to analyze basic signal statistics
 
-        Parameters:
+        Parameters
         ----------
         sig: np.array
             signal to analyze, time series (array, int, float)

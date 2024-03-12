@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 # Std imports
@@ -50,7 +52,7 @@ def _compute_acorr_exp(data, fs):
     """
     Find point, where autocorrelation drops to 1-1/np.e of it's maximum
 
-    Paremeters
+    Parameters
     ----------
     data: np.array
         Signal to analyze, time series (array, int, float)

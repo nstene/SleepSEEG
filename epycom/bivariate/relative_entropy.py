@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 
@@ -18,7 +20,7 @@ def compute_relative_entropy(sig):
     """
     Calculation of Kullback-Leibler divergence:
     relative entropy of sig[0] with respect to sig[1]
-    and relative entropy of sig[1] with respect to sig[0]
+    (not the same as relative entropy of sig[1] with respect to sig[0])
 
     Parameters
     ----------
@@ -30,7 +32,7 @@ def compute_relative_entropy(sig):
     ren: float
         Directional value of relative entropy between sig[0] and sig[1]
 
-    Example:
+    Example
     -------
     ren = compute_relative_entropy(sig)
     """
@@ -40,6 +42,9 @@ def compute_relative_entropy(sig):
 
     if sig.ndim != 2:
         raise TypeError(f"The array must have two dimensions not {sig.ndim}!")
+
+    # Protection against numpy bug https://github.com/numpy/numpy/issues/12435
+    sig = sig.astype('float32')
 
     # OPTIMIZE - check if we can do this in one array
     h1 = np.histogram(sig[0], 10)
@@ -57,13 +62,14 @@ class RelativeEntropy(Method):
 
     algorithm = 'RELATIVE_ENTROPY'
     algorithm_type = 'bivariate'
+    is_directional = True
     version = '2.0.0'
     dtype = [('ren', 'float32')]
 
     def __init__(self, **kwargs):
         """
         Calculation of Kullback-Leibler divergence:
-        relative entropy of sig1 with respect to sig2
+        relative entropy of sig[0] with respect to sig[1]
         """
 
         super().__init__(compute_relative_entropy, **kwargs)

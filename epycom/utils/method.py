@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 # Std imports
@@ -93,7 +95,9 @@ class Method:
         func_sig = inspect.signature(self._compute_function)
         keys_to_pop = []
         if self._compute_function is not None:
-            for key in self._params.keys():
+            for key, value in self._params.items():
+                if key == 'fs' and not isinstance(value, int):
+                    raise ValueError("fs must be an integer")
                 if key not in func_sig.parameters.keys():
                     warnings.warn(f"Unrecognized keyword argument {key}.\
                                     It will be ignored",
@@ -182,6 +186,7 @@ class Method:
 
             results = pool.map(self.compute, chunks)
             pool.close()
+            pool.terminate()
 
         if self.algorithm_type == 'event':
             results_sizes = np.empty(n_windows, np.int32)

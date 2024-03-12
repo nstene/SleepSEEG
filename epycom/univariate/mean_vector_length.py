@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 # Std imports
@@ -13,20 +15,20 @@ import scipy.signal as sp
 from ..utils.method import Method
 
 
-def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
+def compute_mvl_count(sig, fs, lowband=[4, 8], highband=[80, 150]):
     """
-    Function to compute mean vector lenght (MVL) of given data
+    Function to compute mean vector lenght (MVL) of given signal
 
     Parameters
     ----------
     fs: float64
         frequency
-    data: numpy.ndarray
-        data from which MI is computed
+    sig: numpy.ndarray
+        signal from which MVL is computed
     lowband: list
-            low frequency band boundaries [x, y], default [8, 12]
+            low frequency band boundaries [x, y], default [4, 8]
     highband: list
-            high frequency band boundaries [x, y], default [250, 600]
+            high frequency band boundaries [x, y], default [80, 150]
 
     Returns
     -------
@@ -35,7 +37,21 @@ def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
 
     Example
     -------
-    MVL = compute_mvl_count(5000.0, data)
+    MVL = compute_mvl_count(sig, 5000.0)
+
+    References
+    ----------
+
+    R. T. Canolty et al. ,High Gamma Power Is Phase-Locked to Theta 
+    Oscillations in Human Neocortex.Science313,1626-1628(2006).
+    DOI:10.1126/science.1128115
+    https://www.science.org/doi/10.1126/science.1128115?ijkey=3426de4d785c48a29139c7352ea398ff3947c1fe&keytype2=tf_ipsecsha
+
+    Quantification of Phase-Amplitude Coupling in Neuronal Oscillations: 
+    Comparison of Phase-Locking Value, Mean Vector Length, and Modulation Index
+    Mareike J. Hülsemann, Dr. rer. nat, Ewald Naumann, Dr. rer. nat, Björn 
+    Rasch
+    bioRxiv 290361; doi: https://doi.org/10.1101/290361
 
     """
     order = 3
@@ -45,10 +61,10 @@ def compute_mvl_count(data, fs=None, lowband=[8, 12], highband=[250, 600]):
     highband = np.divide(highband, nyq)
 
     [b, a] = sp.butter(order, lowband, btype='bandpass', analog=False)
-    low = sp.filtfilt(b, a, data, axis=0)
+    low = sp.filtfilt(b, a, sig, axis=0)
 
     [b, a] = sp.butter(order, highband, btype='bandpass', analog=False)
-    high = sp.filtfilt(b, a, data, axis=0)
+    high = sp.filtfilt(b, a, sig, axis=0)
 
     # Extracting phase from the low frequency filtered analytic signal
     analytic_signal = sp.hilbert(low)
@@ -68,7 +84,7 @@ class MeanVectorLength(Method):
 
     algorithm = 'MEAN_VECTOR_LENGTH'
     algorithm_type = 'univariate'
-    version = '1.0.0'
+    version = '1.1.0'
     dtype = [('mvl', 'complex64')]
 
     def __init__(self, **kwargs):
@@ -79,8 +95,8 @@ class MeanVectorLength(Method):
         ----------
         fs: float64
             frequency
-        data: numpy.ndarray
-            data from which MI is computed
+        sig: numpy.ndarray
+            signal from which MVL is computed
         lowband: list
                 low frequency band boundaries [x, y]
         highband: list

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 # Std imports
@@ -12,7 +14,7 @@ import numpy as np
 from ..utils.method import Method
 
 
-def compute_pse(sig):
+def compute_power_spectral_entropy(sig):
     """
     Power spectral entropy
 
@@ -27,7 +29,7 @@ def compute_pse(sig):
 
     Example
     -------
-    pac = comute_pse(sig)
+    pse = comute_pse(sig)
     """
 
     ps = np.abs(np.fft.fft(sig))  # power spectrum
@@ -56,4 +58,4 @@ class PowerSpectralEntropy(Method):
             time series (float)
         """
 
-        super().__init__(compute_pse, **kwargs)
+        super().__init__(compute_power_spectral_entropy, **kwargs)

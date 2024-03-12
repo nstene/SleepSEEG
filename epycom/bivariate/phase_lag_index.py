@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 
@@ -37,18 +39,23 @@ def compute_pli(sig, lag=500, lag_step=50):
     -------
     pli: float
         ranges between 0 and 1 (1 for the best phase match between signals)
-    tau: int
-        phase lag for max pli value (in samples, 0 means no lag)
+    k: int
+        phase lag for max pli value in samples
+        value in range <-lag,+lag> (int)
+        k > 0: sig[1] -> sig[0]
+        k = 0: no shift in signals
+        k < 0: sig[0] -> sig[1]
 
     Example
     -------
-    pli, tau = compute_pli(sig, lag=500, lag_step=50)
+    pli, k = compute_pli(sig, lag=500, lag_step=50)
 
     References
     ----------
-    [1] C. J. Stam and J. C. Reijneveld, “Graph theoretical analysis of
-    complex networks in the brain,” Nonlinear Biomed. Phys., vol. 1, no. 1,
-    p. 3, 2007.
+    Stam, C.J., Nolte, G. and Daffertshofer, A. (2007), Phase lag index: 
+    Assessment of functional connectivity from multi channel EEG and MEG with 
+    diminished bias from common sources. Hum. Brain Mapp., 28: 1178-1193.
+    https://doi.org/10.1002/hbm.20346
     """
 
     # TODO: print out warnings if conditions are met for warnings in doc string
@@ -83,16 +90,17 @@ def compute_pli(sig, lag=500, lag_step=50):
 
         pli_temp.append(np.abs(np.mean(np.sign(dph))))
 
-    return np.max(pli_temp), pli_temp.index(max(pli_temp))
+    return np.max(pli_temp), lag-(pli_temp.index(max(pli_temp)))*lag_step
 
 
 class PhaseLagIndex(Method):
 
     algorithm = 'PHASE_LAG_INDEX'
     algorithm_type = 'bivariate'
-    version = '1.0.0'
+    is_directional = True
+    version = '2.0.0'
     dtype = [('pli', 'float32'),
-             ('tau', 'float32')]
+             ('k', 'int')]
 
     def __init__(self, **kwargs):
         """
