@@ -15,7 +15,9 @@ from epycom.bivariate import (LinearCorrelation,
                               RelativeEntropy,
                               PhaseSynchrony,
                               PhaseConsistency,
-                              PhaseLagIndex)
+                              PhaseLagIndex,
+                              SelectionEntropy
+                              )
 
 
 def test_lincorr(create_testing_data, benchmark):
@@ -87,3 +89,13 @@ def test_pli(create_testing_data, benchmark):
                                   n_cores=2)
     
     assert isclose(res[0][0], 1.0, abs_tol=10-6)
+
+def test_selection_entropy(create_testing_data, benchmark):
+    compute_instance = SelectionEntropy()
+    res = benchmark(compute_instance.run_windowed,
+                    create_testing_data, 50000)
+    compute_instance.run_windowed(create_testing_data,
+                                  5000,
+                                  n_cores=2)
+
+    assert isclose(res[0][0], 0.9751458818512009, abs_tol=10-6)
