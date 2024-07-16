@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
 
 
@@ -14,7 +16,7 @@ from scipy.signal import hilbert
 from ..utils.method import Method
 
 
-def compute_spect_multp(sig):
+def compute_spectra_multiplication(sig):
     """
     Multiply spectra of two time series and transforms it back to time domain,
     where the mean and std is calculated
@@ -59,6 +61,7 @@ class SpectraMultiplication(Method):
 
     algorithm = 'SPECTRA_MULTIPLICATION'
     algorithm_type = 'bivariate'
+    is_directional = False
     version = '1.0.0'
     dtype = [('sm_mean', 'float32'),
              ('sm_std', 'float32')]
@@ -68,4 +71,4 @@ class SpectraMultiplication(Method):
         Multiply spectra of two time series and transforms it back to time
         domain where the mean and std is calculated
         """
-        super().__init__(compute_spect_multp, **kwargs)
+        super().__init__(compute_spectra_multiplication, **kwargs)

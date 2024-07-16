@@ -1,8 +1,9 @@
-# -*def- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
-
 
 # Std imports
 from math import isclose
@@ -25,7 +26,7 @@ from epycom.univariate import (SignalStats,
                                ApproximateEntropy,
                                SampleEntropy, 
                                LowFreqMarker,
-                               Multiscale_Entropy
+                               MultiscaleEntropy
                                )
 
 
@@ -180,10 +181,13 @@ def test_low_f_marker(create_testing_data, benchmark):
 
 def test_multiscale_entropy(create_testing_data, benchmark):
     compute_instance = MultiscaleEntropy()
+    compute_instance.params = {'min_scale': 2,
+                               'max_scale': 3}
     res = benchmark(compute_instance.run_windowed,
                     create_testing_data,
                     50000)
     compute_instance.run_windowed(create_testing_data,
                                   50000,
                                   n_cores=2)
-    assert isclose(res[0][0], 2.0149070428176254, abs_tol=10e-6)
+    assert isclose(res[0][0], 4.3165154, abs_tol=10e-6)
+    assert isclose(res[0][1], 3)

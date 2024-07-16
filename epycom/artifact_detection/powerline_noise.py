@@ -17,10 +17,8 @@ from ..utils.method import Method
 
 
 def compute_powerline_noise(sig, fs, freq=60):
-
-    
     """
-    Function to detect the proportio of line noise in the signal
+    Function to detect the proportion of line noise in the signal
 
     Parameters:
     ----------
@@ -68,7 +66,7 @@ class PowerlineNoise(Method):
 
     def __init__(self, **kwargs):
         """
-        Class to detect flat line (saturation or missing data)
+        Class to detect the proportion of line noise in the signal
 
         Parameters:
         ----------

@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) St. Anne's University Hospital in Brno. International Clinical
-# Research Center, Biomedical Engineering. All Rights Reserved.
+# Research Center, Biomedical Engineering;
+# Institute of Scientific Instruments of the CAS, v. v. i., Medical signals -
+# Computational neuroscience. All Rights Reserved.
 # Distributed under the (new) BSD License. See LICENSE.txt for more info.
+
+# Std imports
+import warnings
 
 # Third party imports
 import numpy as np
@@ -87,6 +92,12 @@ def compute_sample_entropy(sig, r=0.1, m=2):
        sample_entropy = compute_sample_entropy(data, 0.1, 2)
     """
 
+    # Check the length of the signal with regard to m
+    if len(sig) < 10**m:
+        warnings.warn(RuntimeWarning,
+                       f"""The length of the signal is smaller than 10**m
+                       ({len(sig)}) the result might not make sense""")
+
     return _compute_sample_entropy(sig.astype(float), float(r), int(m))
 
 
@@ -105,6 +116,8 @@ class SampleEntropy(Method):
         ----------
         sig: np.ndarray
             1D signal
+        r: float64
+            filtering threshold, recommended values: (0.1-0.25)
         m: int
             window length of compared run of data, recommended (2-8)
         r: float64
