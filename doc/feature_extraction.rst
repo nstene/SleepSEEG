@@ -1618,8 +1618,8 @@ of the brain.
     For example pX_0 is percentage of values in the lowest :math:`10 %`, band
     of signal X.
     The bands for the 2 signals does not have to be the same.
-    For consistency of data the numer of bins is fixed and should not be changed
-    as parameter of function.
+    For consistency of data the number of bins is fixed and should not be changed
+    as parametr of function.
 
   - The important note to this is, that relative entropy is not 
     metric, because it is not symmetric (REN(X, Y) is not equal to REN(Y, X))
@@ -1734,7 +1734,7 @@ of the brain.
   - Example
 
   .. code-block:: py
-    :name: LinCorr-example2.7.1
+    :name: SpectraMutli-example2.7.1
 
     #Example1
     x1=np.linspace(0.00, 8*np.pi, num=1001)
@@ -1749,7 +1749,7 @@ of the brain.
     # is constantly 0
 
   .. code-block:: py
-    :name: LinCorr-example2.7.2
+    :name: SpectraMutli-example2.7.2
 
     #Example2
     x1=np.linspace(0.00, 8*np.pi, num=1001)
@@ -1766,7 +1766,7 @@ of the brain.
     # are non-zero and the same
 
   .. code-block:: py
-    :name: LinCorr-example2.7.3
+    :name: SpectraMutli-example2.7.3
 
     #Example3
     x1=np.linspace(0.00, 8*np.pi, num=1001)
@@ -1783,7 +1783,7 @@ of the brain.
     # have similar frequency
 
   .. code-block:: py
-    :name: LinCorr-example2.7.4
+    :name: SpectraMutli-example2.7.4
 
     #Example4
     x1=np.linspace(0.00, 8*np.pi, num=1001)
@@ -1800,7 +1800,7 @@ of the brain.
     # phase independent. Then they have also significantly higher SM_std values 
 
   .. code-block:: py
-    :name: LinCorr-example2.7.5
+    :name: SpectraMutli-example2.7.5
 
     #Example5
     x1=np.linspace(0.00, 8*np.pi, num=1001)
@@ -1815,10 +1815,123 @@ of the brain.
 
     # The main role in the signals takes the frequency, with lower amplitude
     # the SM_mean is smaller, but ratio SM_mean/SM_std does not change much
-     
 
 .. convolution?
   https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.fftconvolve.html#scipy.signal.fftconvolve
+
+- Selection entropy
+
+  - Selection entropy (SelEn) of two signals is feature similar to the Relative 
+    Entropy. It is adviced to understand relative entropy first. The output of 
+    SelEn is similar to the output of REN with few differences. Main edge of 
+    SelEn to REN is symetricality. So in all cases SelEn of sig[0] with respect 
+    to sig[1] is the same as sig[1] with respect to sig[0].
+  
+  - Otherwise SelEn is giving similar ressults as the REN, main difference is 
+    scale.
+    .. figure:: images/2.8.1Example.png
+      :name: Fig2.8.1
+
+    As you can see, the strength of SelEn, lies with the fact that signals with 
+    low REN are much more differentiated by SelEn.
+
+  - Next similarity to REN is, the REN of two signals should not exceed 
+    :math:`REN(X, Y) <= Entropy(X) - Entropy(Y)`, though interpretation in 
+    epycom allows to break this rule.
+    SelEn, on the other hand, equals 
+    :math:`SelEn(X, Y) == Entropy(X) - Entropy(Y) + sum(pxx*np.log(pxx))`, where 
+    :math:`sum(pxx*np. log(pxx))`, is in a similar form to the definition of 
+    entropy, and is directly called entropy in the original publication, 
+    although this naming is misleading. Since for entropy, :math:`sum(pxx) = 1` 
+    would be valid, which is not the case here, since 
+    :math:`pxx = abs(pX - pY)`, where pX (resp. pY) is the probability that the 
+    value is in the i-th bin of signal X (resp. Y) and abs denotes the absolute 
+    value.
+
+  - Direct calculation of the SelEn starts with calculation of distribution.
+    To calculate propability distribution the each signal is devided to 10
+    separete equidistant bins by numpy histogram method.
+    For example pX_0 is percentage of values in the lowest :math:`10 %`, band
+    of signal X.
+    Number of bins is by default set to 10 and can be changed during call of 
+    the function.
+
+    Next step of the calculation is to create new "pseudohistograms" as 
+    :math:`pm(i) = min(pX(i), pY(i))` and :math:`pn(i) = max(pX(i), pY(i))`. 
+    (:math:`sum(pm) <= 1 <= sum(pn)`). For optimisation, values, where 
+    :math:`pm = pn` or :math:`pm = 0`, are excluded because they give 0 in the 
+    theoretical computation and moreover they would create numerical issues.
+
+    Finaly the SelEn is calculated as 
+    :math:`sum(pm*np.log2(pn/pm-1) - pn*np.log2(1-pm/pn))`
+
+  - The original idea of this feature comes from combinatorics and is rather 
+    complicated, so it is advised to look at it directly in the original 
+    publication.
+
+  - The SelEn of two identical signals is 0
+  .. code-block:: py
+    :name: SelEn-example2.8.1
+
+      #Example1
+      x1=np.linspace(0.0, 10*np.pi, num=10001)
+      y1=np.sin(x1)
+      sig = np.array([y1,y1])
+      compute_selection_entropy(sig)
+
+      >>0.0
+                                         
+  - The SelEn of two signals with similar distribution of data is low (near 0)
+  .. code-block:: py
+    :name: SelEn-example2.8.2
+
+      #Example2
+      x1=np.linspace(0.0, 10*np.pi, num=10001)
+      y1=np.sin(x1)
+      y2=np.cos(x1)
+      sig = np.array([y1,y2])
+      compute_selection_entropy(sig)
+
+      >>0.0023215579472837256
+
+  - The SelEn of two signals with different distribution of data is higher
+  .. code-block:: py
+    :name: SelEn-example2.8.3
+
+      #Example3
+      x1=np.linspace(0.0, 10*np.pi, num=10001)
+      y1=np.sin(x1)
+      y3=np.exp(x1)
+      sig = np.array([y1,y2])
+      compute_selection_entropy(sig)
+
+      >>1.0225855289324521
+
+      compute_selection_entropy(sig)
+
+      >>1.0225855289324521
+
+  - And the selection entropy is symetrical (does not matter on order of signals)
+    
+  - For consistency is needed to use same number of bins
+  .. code-block:: py
+    :name: SelEn-example2.8.4
+
+      #Example4
+      x1=np.linspace(0.0, 10*np.pi, num=10001)
+      y4=np.sin(x1*0)
+      y3=np.exp(x1)
+      sig = np.array([y3,y4])
+      compute_selection_entropy(sig, nbins = 10)
+
+      >>0.051431456096640134
+
+      compute_selection_entropy(sig, nbins = 100)
+
+      >>0.00728636516160517
+
+  Otherwise it could ressult in non consistent ressults.
+
 
 Event detection
 *********************************
