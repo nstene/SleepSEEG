@@ -94,9 +94,9 @@ def compute_sample_entropy(sig, r=0.1, m=2):
 
     # Check the length of the signal with regard to m
     if len(sig) < 10**m:
-        warnings.warn(RuntimeWarning,
-                       f"""The length of the signal is smaller than 10**m
-                       ({len(sig)}) the result might not make sense""")
+        warnings.warn(f"""The length of the signal is smaller than 10**m
+                      ({len(sig)}) the result might not make sense""",
+                      RuntimeWarning)
 
     return _compute_sample_entropy(sig.astype(float), float(r), int(m))
 
