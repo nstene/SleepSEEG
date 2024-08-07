@@ -58,8 +58,8 @@ def compute_selection_entropy(sig, nbins = 10):
     x2 = np.where((pn != pm) & (pm != 0))[0]
     #for x->0: x*log2(x) -> 0 so we can ignore those indexes
 
-    SelEn = np.sum(pm[x2]*np.log2(pn[x2]/pm[x2]-1)) 
-    - np.sum(pn[x1]*np.log2(1-pm[x1]/pn[x1])) 
+    SelEn = (np.sum(pm[x2]*np.log2(pn[x2]/pm[x2]-1))
+    - np.sum(pn[x1]*np.log2(1-pm[x1]/pn[x1])))
     # the change from original proposed algorithm is change in order of sums, 
     # that is possible because the sum is finite
     return SelEn
