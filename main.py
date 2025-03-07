@@ -1,4 +1,4 @@
-from MatlabModelImport import MatlabModelImport
+from models.MatlabModelImport import MatlabModelImport
 import os
 
 def main():

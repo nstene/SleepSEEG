@@ -3,7 +3,7 @@ import numpy as np
 import h5py
 import os
 
-from SleepSEEG import SleepSEEG, Epoch
+from models.SleepSEEG import SleepSEEG, Epoch
 from eeg_reader import EdfReader
 
 
@@ -22,6 +22,7 @@ class TestSleepSEEG(unittest.TestCase):
     full_data_file = r'eeg_data/auditory_stimulation_P18_002.edf'
     data_file_3min = r'eeg_data/auditory_stimulation_P18_002_3min.edf'
     features_3min = r'matlab_files/features_3min_bipolar.mat'
+    features_3min_without_outliers = r'matlab_files/features_without_outliers_bipolar_3min.mat'
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -34,8 +35,14 @@ class TestSleepSEEG(unittest.TestCase):
         with h5py.File(cls.epoch_0_resampled_trimmed_baselined, 'r') as file:
             cls.epoch_0_matlab_data_resampled_trimmed_baselined = list(file['x_save'])[0]
         with h5py.File(cls.features_3min, 'r') as file:
-            cls.features_matlab = list(file['feature'])
-        cls.sleepseeg = SleepSEEG(filepath=cls.full_data_file)
+            features_matlab = list(file['feature'])
+        features_matlab = np.array(features_matlab)
+        cls.features_matlab = np.transpose(features_matlab, (2, 1, 0))
+        with h5py.File(cls.features_3min_without_outliers, 'r') as file:
+            features_without_outliers_matlab = list(file['feature'])
+        features_without_outliers_matlab = np.array(features_without_outliers_matlab)
+        cls.features_without_outliers_matlab = np.transpose(features_without_outliers_matlab, (0, 2, 1))
+        # cls.sleepseeg = SleepSEEG(filepath=cls.full_data_file)
         cls.sleepseeg_3min = SleepSEEG(filepath=cls.data_file_3min)
 
     def test_get_epoch(self):
@@ -47,9 +54,15 @@ class TestSleepSEEG(unittest.TestCase):
         self.assertTrue(relative_rmse < 0.01)
 
     def test_compute_features(self):
-        features_python = self.sleepseeg_3min.compute_epoch_features()
+        # TODO: issue with compute features
+        self.sleepseeg_3min.compute_epoch_features()
 
-        self.assertTrue(np.allclose(features_python[0], self.features_matlab[0], rtol=0.5))
+        self.assertTrue(np.allclose(self.sleepseeg_3min.features, self.features_matlab, rtol=0.5))
+
+    def test_remove_outliers(self):
+
+        features_without_outliers_python = self.sleepseeg_3min.remove_outliers(features=self.features_matlab)
+        self.assertEqual(np.sum(np.isnan(features_without_outliers_python)), np.sum(np.isnan(self.features_without_outliers_matlab)))
 
 class TestEpoch(unittest.TestCase):
     epoch_0_file = r'matlab_files/epoch_0_LTP1.mat'

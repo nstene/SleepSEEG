@@ -1,7 +1,9 @@
 import warnings
 import logging
+import typing as t
 
 import scipy.signal
+from scipy.ndimage import uniform_filter1d
 from tqdm import tqdm
 
 import numpy as np
@@ -50,7 +52,7 @@ class Epoch(EEG):
         self._data = normalized_data
         return
 
-    def compute_features(self):
+    def compute_features(self) -> np.ndarray:
         features_list = []
         for i in range(len(self._montage.channels)):
             x = self._data[i]
@@ -216,6 +218,7 @@ class Epoch(EEG):
 
 class SleepSEEG:
     def __init__(self, filepath: str):
+        self.features = None
         logger = logging.getLogger('SleepSEEG_logger')
         logger.setLevel(logging.DEBUG)  # Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         # Create console handler and set its format
@@ -276,7 +279,8 @@ class SleepSEEG:
 
             # Compute epoch features
             features_list.append(epoch.compute_features())
-        return features_list
+        self.features = np.array(features_list).transpose(2, 1, 0)
+        return
 
     def read_epoch(self, start_sample: int, end_sample: int = None, epoch_duration: float = None):
         if not end_sample:
@@ -295,9 +299,43 @@ class SleepSEEG:
 
         return Epoch(data=data, fs=self._edf.sampling_frequency, timestamps=timestamps, montage=montage)
 
+    @staticmethod
+    def remove_outliers(features: np.ndarray):
+        """Remove outliers.
+        For now, features should be 1 dimensional, shape Nevents
+        """
+        nf = features.shape[0]
+        nch = features.shape[1]
+        for feat_idx in range(nf):
+            for chan_idx in range(nch):
+                feat = features[feat_idx, chan_idx, :].copy()
+                idx_nan = np.isnan(feat)
+                np.delete(arr=feat, obj=idx_nan)
+                mov_avg = uniform_filter1d(feat, size=min(feat.shape[0], 10), axis=0, mode="wrap")
+                feat = feat - mov_avg
+                q3 = np.percentile(feat, 75, method='lower', axis=0)
+                q1 = np.percentile(feat, 25, method='lower', axis=0)
+                iqr = q3 - q1
+                lower_bound = q1 - 2.5 * iqr
+                upper_bound = q3 + 2.5 * iqr
+                outliers = (feat < lower_bound) | (feat > upper_bound) | idx_nan
+                features[feat_idx, chan_idx, outliers] = np.nan
+        return features
+
+    def preprocess_features(self) -> t.List[np.ndarray]:
+
+        preprocessed_channel_features = []
+        # Outlier detection: remove outliers comparing the same feature on same channel comparing across epoch axis
+        features_without_outliers = self.remove_outliers(features=self.features)
+
+        # Smoothing
+        # Normalizing
+        # Extract features coordinates
+        return features_without_outliers
+
 
 if __name__ == "__main__":
-    filepath = r'eeg_data/auditory_stimulation_P18_002.edf'
+    filepath = r'../eeg_data/auditory_stimulation_P18_002_3min.edf'
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
 
     #sleep_eeg_instance.get_epoch_by_index(epoch_index=0)
