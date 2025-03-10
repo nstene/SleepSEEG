@@ -208,7 +208,7 @@ class EdfReader:
     EPOCH_LENGTH = 30  # In seconds
 
     def __init__(self, filepath: str):
-        self._raw_data = mne.io.read_raw_edf(filepath)
+        self._raw_data = mne.io.read_raw_edf(input_fname=filepath, preload=False)
         self._channel_names = []
         self.channels = []
         self.filepath = filepath
@@ -388,7 +388,7 @@ class EdfReader:
 
         data, times = self._raw_data.get_data(picks=chan_picks, start=start_sample, stop=end_sample, return_times=True)
 
-        return data, times, channels
+        return data*10e6, times, channels
 
     def extract_data_pyedflib(self, start_sample: int, stop_sample: int, chan_picks: list = None, digital: bool=False):
         """

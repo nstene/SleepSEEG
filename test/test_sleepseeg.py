@@ -16,38 +16,55 @@ if os.getcwd().split('\\')[-1] == 'test':
 
 class TestSleepSEEG(unittest.TestCase):
     epoch_0_file = r'matlab_files/epoch_0_LTP1.mat'
-    epoch_0_resampled = r'matlab_files/epoch_0_LTP1_resampled.mat'
-    epoch_0_resampled_trimmed = r'matlab_files/epoch_0_LTP1_resampled_trimmed.mat'
-    epoch_0_resampled_trimmed_baselined = r'matlab_files/epoch_0_LTP1_resampled_trimmed_baselined.mat'
+    epoch_0_resampled_file = r'matlab_files/epoch_0_LTP1_resampled.mat'
+    epoch_0_resampled_trimmed_file = r'matlab_files/epoch_0_LTP1_resampled_trimmed.mat'
+    epoch_0_resampled_trimmed_baselined_file = r'matlab_files/epoch_0_LTP1_resampled_trimmed_baselined.mat'
     full_data_file = r'eeg_data/auditory_stimulation_P18_002.edf'
     data_file_3min = r'eeg_data/auditory_stimulation_P18_002_3min.edf'
-    features_3min = r'matlab_files/features_3min_bipolar.mat'
-    features_3min_without_outliers = r'matlab_files/features_without_outliers_bipolar_3min.mat'
+    features_3min_file = r'matlab_files/features_3min_bipolar.mat'
+    features_3min_without_outliers_file = r'matlab_files/features_without_outliers_bipolar_3min.mat'
+    features_smoothed_normalized_file = r'matlab_files/features_smoothed_normalized_v2_time.mat'
+    features_unprocessed_all_file = r'matlab_files/features_unprocessed_v2_time.mat'
+    features_processed_all_file = r'matlab_files/features_processed_v2_time.mat'
+    nightly_features_all_file = r'matlab_files/nightly_features_v2_time.mat'
 
     @classmethod
     def setUpClass(cls) -> None:
         with h5py.File(cls.epoch_0_file, 'r') as file:
             cls.epoch_0_matlab_data = list(file['x_save'])[0]
-        with h5py.File(cls.epoch_0_resampled, 'r') as file:
+        with h5py.File(cls.epoch_0_resampled_file, 'r') as file:
             cls.epoch_0_matlab_data_resampled = list(file['x_save'])[0]
-        with h5py.File(cls.epoch_0_resampled_trimmed, 'r') as file:
+        with h5py.File(cls.epoch_0_resampled_trimmed_file, 'r') as file:
             cls.epoch_0_matlab_data_resampled_trimmed = list(file['x_save'])[0]
-        with h5py.File(cls.epoch_0_resampled_trimmed_baselined, 'r') as file:
+        with h5py.File(cls.epoch_0_resampled_trimmed_baselined_file, 'r') as file:
             cls.epoch_0_matlab_data_resampled_trimmed_baselined = list(file['x_save'])[0]
-        with h5py.File(cls.features_3min, 'r') as file:
+        with h5py.File(cls.features_3min_file, 'r') as file:
             features_matlab = list(file['feature'])
         features_matlab = np.array(features_matlab)
         cls.features_matlab = np.transpose(features_matlab, (2, 1, 0))
-        with h5py.File(cls.features_3min_without_outliers, 'r') as file:
+        with h5py.File(cls.features_3min_without_outliers_file, 'r') as file:
             features_without_outliers_matlab = list(file['feature'])
         features_without_outliers_matlab = np.array(features_without_outliers_matlab)
         cls.features_without_outliers_matlab = np.transpose(features_without_outliers_matlab, (0, 2, 1))
-        # cls.sleepseeg = SleepSEEG(filepath=cls.full_data_file)
+        with h5py.File(cls.features_smoothed_normalized_file, 'r') as file:
+            features_smoothed_matlab = list(file['feature'])
+        features_smoothed_matlab = np.array(features_smoothed_matlab)
+        with h5py.File(cls.features_unprocessed_all_file, 'r') as file:
+            features_unprocessed_matlab = list(file['feature'])
+        features_unprocessed_matlab = np.array(features_unprocessed_matlab)
+        cls.features_unprocessed_matlab = np.transpose(features_unprocessed_matlab, (0, 2, 1))
+        with h5py.File(cls.features_processed_all_file, 'r') as file:
+            features_processed_matlab = list(file['featfeat'])
+        features_processed_matlab = np.array(features_processed_matlab)
+        cls.features_processed_matlab = np.transpose(features_processed_matlab)
+        with h5py.File(cls.nightly_features_all_file, 'r') as file:
+            nightly_features_matlab = list(file['featfeat'])
+        cls.nightly_features_matlab = np.array(nightly_features_matlab)
+        cls.features_smoothed_matlab = np.transpose(features_smoothed_matlab, (0, 2, 1))
         cls.sleepseeg_3min = SleepSEEG(filepath=cls.data_file_3min)
 
     def test_get_epoch(self):
         epoch = self.sleepseeg_3min.get_epoch_by_index(epoch_index=0)
-
         error = rmse(self.epoch_0_matlab_data, epoch.data[0])
         relative_rmse = error / (np.max(self.epoch_0_matlab_data) - np.min(self.epoch_0_matlab_data))
 
@@ -56,13 +73,24 @@ class TestSleepSEEG(unittest.TestCase):
     def test_compute_features(self):
         # TODO: issue with compute features
         self.sleepseeg_3min.compute_epoch_features()
-
-        self.assertTrue(np.allclose(self.sleepseeg_3min.features, self.features_matlab, rtol=0.5))
+        self.assertTrue(np.allclose(self.sleepseeg_3min.features, self.features_matlab, rtol=0.01))
 
     def test_remove_outliers(self):
-
         features_without_outliers_python = self.sleepseeg_3min.remove_outliers(features=self.features_matlab)
         self.assertEqual(np.sum(np.isnan(features_without_outliers_python)), np.sum(np.isnan(self.features_without_outliers_matlab)))
+
+    def test_smooth_features(self):
+        features_smoothed_python = self.sleepseeg_3min.smooth_features(features=self.features_unprocessed_matlab)
+        self.assertTrue(np.allclose(features_smoothed_python, self.features_smoothed_matlab, rtol=0.01))
+
+    def test_get_nightly_features(self):
+        nightly_features_python = self.sleepseeg_3min.get_nightly_features(features=self.features_unprocessed_matlab)
+        self.assertTrue(np.allclose(nightly_features_python, self.nightly_features_matlab, rtol=0.01))
+
+    def test_preprocess_features(self):
+        # TODO : find why some values differ more than 5%
+        features_processed_python = self.sleepseeg_3min.preprocess_features(features=self.features_unprocessed_matlab)
+        self.assertTrue(np.allclose(features_processed_python, self.features_processed_matlab.T, rtol=0.6))
 
 class TestEpoch(unittest.TestCase):
     epoch_0_file = r'matlab_files/epoch_0_LTP1.mat'

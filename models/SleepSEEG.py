@@ -1,17 +1,18 @@
 import warnings
 import logging
 import typing as t
+import os
 
-import scipy.signal
 from scipy.ndimage import uniform_filter1d
 from tqdm import tqdm
 
 import numpy as np
+import pandas as pd
 from scipy import signal
 from matplotlib import pyplot as plt
 
 from eeg_reader import EdfReader, EEG, Montage, Channel
-
+from models.MatlabModelImport import MatlabModelImport, ClassificationTree
 
 class Epoch(EEG):
     def __init__(self, data, timestamps, fs, montage: Montage = None):
@@ -279,8 +280,8 @@ class SleepSEEG:
 
             # Compute epoch features
             features_list.append(epoch.compute_features())
-        self.features = np.array(features_list).transpose(2, 1, 0)
-        return
+        np.array(features_list).transpose(2, 1, 0)
+        return np.array(features_list).transpose(2, 1, 0)
 
     def read_epoch(self, start_sample: int, end_sample: int = None, epoch_duration: float = None):
         if not end_sample:
@@ -293,8 +294,8 @@ class SleepSEEG:
         start_sample = int(start_sample)
         end_sample = int(end_sample)
 
-        _, timestamps, _ = self._edf.extract_data_mne(start_sample=start_sample, end_sample=end_sample)
-        data, channels = self._edf.extract_data_pyedflib(start_sample=start_sample, stop_sample=end_sample)
+        data, timestamps, channels = self._edf.extract_data_mne(start_sample=start_sample, end_sample=end_sample)
+        #data, channels = self._edf.extract_data_pyedflib(start_sample=start_sample, stop_sample=end_sample)
         montage = Montage(channels=channels, montage_type='referential')
 
         return Epoch(data=data, fs=self._edf.sampling_frequency, timestamps=timestamps, montage=montage)
@@ -302,7 +303,6 @@ class SleepSEEG:
     @staticmethod
     def remove_outliers(features: np.ndarray):
         """Remove outliers.
-        For now, features should be 1 dimensional, shape Nevents
         """
         nf = features.shape[0]
         nch = features.shape[1]
@@ -310,7 +310,7 @@ class SleepSEEG:
             for chan_idx in range(nch):
                 feat = features[feat_idx, chan_idx, :].copy()
                 idx_nan = np.isnan(feat)
-                np.delete(arr=feat, obj=idx_nan)
+                feat = np.delete(arr=feat, obj=idx_nan)
                 mov_avg = uniform_filter1d(feat, size=min(feat.shape[0], 10), axis=0, mode="wrap")
                 feat = feat - mov_avg
                 q3 = np.percentile(feat, 75, method='lower', axis=0)
@@ -322,22 +322,156 @@ class SleepSEEG:
                 features[feat_idx, chan_idx, outliers] = np.nan
         return features
 
-    def preprocess_features(self) -> t.List[np.ndarray]:
+    @staticmethod
+    def movmean(features, window_size: int, nanflag='includenan'):
+        """
+        Python equivalent of MATLAB's movmean function.
 
-        preprocessed_channel_features = []
+        Parameters:
+            array: Input array.
+            window_size: Window size. If a list, it should be [kb, kf].
+            dim (int): Dimension along which to operate. If None, operates along the first non-singleton dimension.
+            nanflag (str): 'includenan' to include NaNs, 'omitnan' to ignore NaNs.
+            SamplePoints (numpy.ndarray): Sample points for weighted averaging (not implemented here).
+
+        Returns:
+            numpy.ndarray: Array of local k-point mean values.
+        """
+
+        nf = features.shape[0]
+        nch = features.shape[1]
+        for feat_idx in range(nf):
+            for chan_idx in range(nch):
+                feat = features[feat_idx, chan_idx, :].copy()
+                # Handle window size
+                kb = window_size // 2
+
+                # Handle NaN values
+                if nanflag == 'omitnan':
+                    array_with_no_nans = np.where(np.isnan(feat), 0, feat)  # Replace NaNs with 0 for calculation
+                    count = np.ones_like(array_with_no_nans)  # Count of non-NaN elements
+                    count[np.isnan(array_with_no_nans)] = 0
+                else:
+                    count = np.ones_like(feat)
+
+                # Apply uniform_filter1d for sliding window mean
+                def apply_filter(arr):
+                    return uniform_filter1d(arr, window_size, mode='wrap', origin=-(kb))
+
+                # Apply along the specified dimension
+                M = np.apply_along_axis(apply_filter, 0, feat)
+                valid_count = np.apply_along_axis(apply_filter, 0, count)
+
+                # Normalize to handle edge cases and NaN omission
+                M = M / valid_count
+
+                # Restore NaNs if needed
+                if nanflag == 'omitnan':
+                    M[valid_count == 0] = np.nan
+
+                features[feat_idx, chan_idx, :] = M
+
+        return features
+
+    @staticmethod
+    def smooth_features(features: np.ndarray):
+        """Smooth features.
+        """
+        window_size = 3
+        nf = features.shape[0]
+        nch = features.shape[1]
+        ne = features.shape[2]
+        features_smoothed_normalized = np.ndarray(shape=features.shape)
+        for feat_idx in range(nf):
+            for chan_idx in range(nch):
+                feat = features[feat_idx, chan_idx, :].copy()
+                feat_copy = features[feat_idx, chan_idx, :].copy()
+                idx_nan = np.isnan(feat)
+                feat_copy = feat_copy[~idx_nan]
+                filtered_feature = pd.Series(feat_copy).rolling(window=window_size, min_periods=1, center=True).mean().to_numpy()
+                feat[~idx_nan] = filtered_feature
+                features_smoothed_normalized[feat_idx, chan_idx, :] = (feat - np.nanmean(feat)) / (np.nanstd(feat))
+        return features_smoothed_normalized
+
+    @staticmethod
+    def get_nightly_features(features: np.ndarray):
+        window_size = 10
+        nf = features.shape[0]
+        nch = features.shape[1]
+        ne = features.shape[2]
+        nightly_features = np.zeros(shape=(nf, nch))
+        for feat_idx in range(nf):
+            for chan_idx in range(nch):
+                feat = features[feat_idx, chan_idx, :].copy()
+                idx_nan = np.isnan(feat)
+                feat = np.delete(arr=feat, obj=idx_nan)
+                feat_avg = pd.Series(feat).rolling(window=window_size, min_periods=1, center=True).mean().to_numpy()
+                norm = np.linalg.norm(feat)
+                if norm and not np.any(np.isnan(norm)):
+                    if norm == 0:
+                        print('oh')
+                    if np.count_nonzero(np.isnan(feat_avg))>0:
+                        print('hey')
+                    nightly_features[feat_idx, chan_idx] = np.linalg.norm(feat_avg) / norm
+                else:
+                    print(feat_idx, chan_idx)
+
+        return nightly_features
+
+    def preprocess_features(self, features: np.ndarray) -> np.ndarray:
+        """
+        Preprocess features. Features should be an array of shape (Nfeat, Nchans, Nepochs)
+        :param features:
+        :return:
+        """
+
         # Outlier detection: remove outliers comparing the same feature on same channel comparing across epoch axis
-        features_without_outliers = self.remove_outliers(features=self.features)
+        features_without_outliers = self.remove_outliers(features=features)
 
-        # Smoothing
-        # Normalizing
-        # Extract features coordinates
-        return features_without_outliers
+        # Smoothing & Normalizing
+        features_without_outliers_smoothed = self.smooth_features(features=features_without_outliers)
+
+        # Extract nightly features
+        nightly_features = self.get_nightly_features(features=features_without_outliers_smoothed)
+
+        return nightly_features
+
+    def cluster_channels(self, nightly_features: np.ndarray, gc):
+        Nch = nightly_features.shape[1]
+        channel_groups = np.zeros(Nch, dtype=int)  # Initialize the output array
+
+        for nc in range(Nch):
+            differences = nightly_features[:, nc] - gc  # Compute element-wise differences
+            distances = np.sum(differences ** 2, axis=0)  # Compute squared Euclidean distances
+            channel_groups[nc] = np.argmin(distances)  # Find index of minimum distance
+
+        return channel_groups
+
+    def score_channels(self):
+        return
+
+
+
 
 
 if __name__ == "__main__":
-    filepath = r'../eeg_data/auditory_stimulation_P18_002_3min.edf'
+    filepath = r'../eeg_data/auditory_stimulation_P18_002.edf'
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
 
-    #sleep_eeg_instance.get_epoch_by_index(epoch_index=0)
-    #sleep_eeg_instance._edf.clean_channel_names()
-    sleep_eeg_instance.compute_epoch_features()
+    features = sleep_eeg_instance.compute_epoch_features()
+    features_preprocessed = sleep_eeg_instance.preprocess_features(features=features)
+
+    np.save(file='features_processed_full.npy', arr=features_preprocessed, allow_pickle=False)
+    loaded_processed = np.load(file='features_processed_full.npy')
+    np.array_equal(features_preprocessed, loaded_processed)
+
+    parameters_directory = r'../model_parameters'
+    model_filename = r'Model_BEA_refactored.mat'
+    model_filepath = os.path.join(parameters_directory, model_filename)
+
+    gc_filename = r'GC_BEA.mat'
+    gc_filepath = os.path.join(parameters_directory, gc_filename)
+    matlab_model_import = MatlabModelImport(model_filepath=model_filepath, gc_filepath=gc_filepath)
+
+    channel_groups = sleep_eeg_instance.cluster_channels(nightly_features=features_preprocessed, gc=matlab_model_import.GC)
+    print('hi')
