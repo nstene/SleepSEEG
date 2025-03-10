@@ -418,7 +418,7 @@ class SleepSEEG:
 
         return nightly_features
 
-    def preprocess_features(self, features: np.ndarray) -> np.ndarray:
+    def preprocess_features(self, features: np.ndarray) -> t.Tuple[np.ndarray, np.ndarray]:
         """
         Preprocess features. Features should be an array of shape (Nfeat, Nchans, Nepochs)
         :param features:
@@ -429,20 +429,21 @@ class SleepSEEG:
         features_without_outliers = self.remove_outliers(features=features)
 
         # Smoothing & Normalizing
-        features_without_outliers_smoothed = self.smooth_features(features=features_without_outliers)
+        preprocessed_features = self.smooth_features(features=features_without_outliers)
 
         # Extract nightly features
-        nightly_features = self.get_nightly_features(features=features_without_outliers_smoothed)
+        nightly_features = self.get_nightly_features(features=preprocessed_features)
 
-        return nightly_features
+        return preprocessed_features, nightly_features
 
     def cluster_channels(self, nightly_features: np.ndarray, gc):
         Nch = nightly_features.shape[1]
-        channel_groups = np.zeros(Nch, dtype=int)  # Initialize the output array
+        channel_groups = np.zeros(Nch, dtype=int)
+        Ng = gc.shape[0]
 
         for nc in range(Nch):
-            differences = nightly_features[:, nc] - gc  # Compute element-wise differences
-            distances = np.sum(differences ** 2, axis=0)  # Compute squared Euclidean distances
+            differences = np.tile(nightly_features[:, nc], (Ng, 1)) - gc
+            distances = np.sum(differences ** 2, axis=1)  # Compute squared Euclidean distances
             channel_groups[nc] = np.argmin(distances)  # Find index of minimum distance
 
         return channel_groups
@@ -459,7 +460,7 @@ if __name__ == "__main__":
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
 
     features = sleep_eeg_instance.compute_epoch_features()
-    features_preprocessed = sleep_eeg_instance.preprocess_features(features=features)
+    features_preprocessed, nightly_features = sleep_eeg_instance.preprocess_features(features=features)
 
     np.save(file='features_processed_full.npy', arr=features_preprocessed, allow_pickle=False)
     loaded_processed = np.load(file='features_processed_full.npy')

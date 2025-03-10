@@ -5,6 +5,7 @@ import os
 
 from models.SleepSEEG import SleepSEEG, Epoch
 from eeg_reader import EdfReader
+from models.MatlabModelImport import MatlabModelImport
 
 
 def rmse(signal1, signal2):
@@ -27,6 +28,14 @@ class TestSleepSEEG(unittest.TestCase):
     features_unprocessed_all_file = r'matlab_files/features_unprocessed_v2_time.mat'
     features_processed_all_file = r'matlab_files/features_processed_v2_time.mat'
     nightly_features_all_file = r'matlab_files/nightly_features_v2_time.mat'
+    channel_groups_file = r'matlab_files/channel_groups.mat'
+
+    parameters_directory = r'model_parameters'
+    model_filename = r'Model_BEA_refactored.mat'
+    model_filepath = os.path.join(parameters_directory, model_filename)
+
+    gc_filename = r'GC_BEA.mat'
+    gc_filepath = os.path.join(parameters_directory, gc_filename)
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -55,13 +64,17 @@ class TestSleepSEEG(unittest.TestCase):
         cls.features_unprocessed_matlab = np.transpose(features_unprocessed_matlab, (0, 2, 1))
         with h5py.File(cls.features_processed_all_file, 'r') as file:
             features_processed_matlab = list(file['featfeat'])
-        features_processed_matlab = np.array(features_processed_matlab)
-        cls.features_processed_matlab = np.transpose(features_processed_matlab)
+        cls.features_processed_matlab = np.array(features_processed_matlab)
         with h5py.File(cls.nightly_features_all_file, 'r') as file:
             nightly_features_matlab = list(file['featfeat'])
         cls.nightly_features_matlab = np.array(nightly_features_matlab)
+        with h5py.File(cls.channel_groups_file, 'r') as file:
+            channel_groups_matlab = list(file['ch_gr'])
+        cls.channel_groups_matlab = np.array(channel_groups_matlab)
         cls.features_smoothed_matlab = np.transpose(features_smoothed_matlab, (0, 2, 1))
         cls.sleepseeg_3min = SleepSEEG(filepath=cls.data_file_3min)
+
+        cls.matlab_model_import = MatlabModelImport(model_filepath=cls.model_filepath, gc_filepath=cls.gc_filepath)
 
     def test_get_epoch(self):
         epoch = self.sleepseeg_3min.get_epoch_by_index(epoch_index=0)
@@ -89,8 +102,16 @@ class TestSleepSEEG(unittest.TestCase):
 
     def test_preprocess_features(self):
         # TODO : find why some values differ more than 5%
-        features_processed_python = self.sleepseeg_3min.preprocess_features(features=self.features_unprocessed_matlab)
-        self.assertTrue(np.allclose(features_processed_python, self.features_processed_matlab.T, rtol=0.6))
+        _, nightly_features_python = self.sleepseeg_3min.preprocess_features(features=self.features_unprocessed_matlab)
+        self.assertTrue(np.allclose(nightly_features_python, self.features_processed_matlab, rtol=0.6))
+
+    def test_cluster_channels(self):
+        channel_groups_python = self.sleepseeg_3min.cluster_channels(
+            nightly_features=self.features_processed_matlab,
+            gc=self.matlab_model_import.GC
+        )
+
+        self.assertTrue(np.all(np.equal(channel_groups_python, self.channel_groups_matlab - 1)))
 
 class TestEpoch(unittest.TestCase):
     epoch_0_file = r'matlab_files/epoch_0_LTP1.mat'
