@@ -1,8 +1,7 @@
-import warnings
 import logging
 import typing as t
 import os
-import cProfile
+from datetime import datetime, timedelta
 
 from scipy.ndimage import uniform_filter1d
 from tqdm import tqdm
@@ -11,8 +10,12 @@ import numpy as np
 import pandas as pd
 from scipy import signal
 
-from eeg_reader import EdfReader, EEG, Montage, Channel
+from models.eeg_reader import EdfReader, EEG, Montage
 from models.MatlabModelImport import MatlabModelImport, ClassificationTree
+
+
+STAGENAMES = {1: 'R', 2: 'W', 3: 'N1', 4: 'N2', 5: 'N3'}
+
 
 class Epoch(EEG):
     def __init__(self, data, timestamps, fs, montage: Montage = None):
@@ -20,6 +23,8 @@ class Epoch(EEG):
         self.timestamps = timestamps
         self.fs = fs
         self.features = None
+        self.start_time = None
+        self.start_sample = None
 
     def trim(self, n_samples_from_start: int, n_samples_to_end: int):
         if len(self._data.shape) > 1:
@@ -56,8 +61,7 @@ class Epoch(EEG):
     def compute_features(self) -> np.ndarray:
         features_list = []
         for i in range(len(self._montage.channels)):
-            x = self._data[i]
-            features_list.append(self._compute_signal_features(data=x))
+            features_list.append(self._compute_signal_features(data=self.data[i]))
         self.features = np.vstack(features_list)
         return self.features
 
@@ -219,14 +223,16 @@ class Epoch(EEG):
 
 class SleepSEEG:
     def __init__(self, filepath: str):
+        self.sleep_stages = None
+        self.summary = None
         self.features = None
         logger = logging.getLogger('SleepSEEG_logger')
-        logger.setLevel(logging.DEBUG)  # Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        logger.setLevel(logging.DEBUG)
         # Create console handler and set its format
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)  # Log all messages from DEBUG level and up
         # Define log format
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         console_handler.setFormatter(formatter)
         # Add handler to the logger
         logger.addHandler(console_handler)
@@ -237,8 +243,7 @@ class SleepSEEG:
         self._filepath = filepath
         self._edf = EdfReader(filepath=filepath)
         self.montage_type = 'referential'
-        self.epochs = None
-        self.epochs_preprocessed = False
+        self.epochs = []
         self.sleep_stage = None
 
     def read_initial_buffer(self, time_window: float = 2.5):
@@ -253,14 +258,19 @@ class SleepSEEG:
     def get_epoch_by_index(self, epoch_index: int):
         rolling_window_seconds = 2.5
         epoch_zero_start = int(self._edf.start_time_sample - rolling_window_seconds / 2 * self._edf.sampling_frequency)
+        # epoch_zero_start = int(self._edf.start_time_sample)
 
-        epoch_start = epoch_zero_start + epoch_index * 30 * self._edf.sampling_frequency
+        epoch_start = int(epoch_zero_start + epoch_index * 30 * self._edf.sampling_frequency)
         epoch_end = (epoch_zero_start + (epoch_index + 1) * 30 * self._edf.sampling_frequency
                      + rolling_window_seconds * self._edf.sampling_frequency)
 
-        return self.read_epoch(start_sample=epoch_start, end_sample=epoch_end)
+        epoch = self.read_epoch(start_sample=epoch_start, end_sample=epoch_end)
+        epoch.start_time = self._edf.start_timenum + epoch_index / 28800
+        epoch.start_sample = epoch_start
+        return epoch
 
     def compute_epoch_features(self):
+        self.logger.info(msg="Started epoch extraction and feature computation.")
         features_list = []
         for epoch_index in tqdm(range(self._edf.n_epochs), "Computing features for epoch"):
             # Read epoch
@@ -276,7 +286,7 @@ class SleepSEEG:
 
             # Compute epoch features
             features_list.append(epoch.compute_features())
-
+            self.epochs.append(epoch)
         return np.array(features_list).transpose(2, 1, 0)
 
     def read_epoch(self, start_sample: int, end_sample: int = None, epoch_duration: float = None):
@@ -353,10 +363,6 @@ class SleepSEEG:
                 feat_avg = pd.Series(feat).rolling(window=window_size, min_periods=1, center=True).mean().to_numpy()
                 norm = np.linalg.norm(feat)
                 if norm and not np.any(np.isnan(norm)):
-                    if norm == 0:
-                        print('oh')
-                    if np.count_nonzero(np.isnan(feat_avg))>0:
-                        print('hey')
                     nightly_features[feat_idx, chan_idx] = np.linalg.norm(feat_avg) / norm
                 else:
                     print(feat_idx, chan_idx)
@@ -461,17 +467,83 @@ class SleepSEEG:
         postprob = _score_channels(models=models, features=features, logger=self.logger)
         confidence = _compute_confidence(prob=postprob)
         sa, mm = _define_stage(confidence=confidence)
+
+        for i, epoch in enumerate(self.epochs):
+            epoch.stage = sa[i]
+            epoch.max_confidence = mm[i]
+
+        self.logger.info(msg="Finished scoring epochs.")
         return sa, mm
 
+    def export_sleep_stage_output(self, output_folder: str, filename: str = 'SleepStage.csv'):
+        # Sort epochs per start time
+        self.epochs.sort(key=lambda x:x.start_time)
 
-class SleepStage:
-    def __init__(self, stage, max_confidence, sample, time):
-        self.stage=stage
-        self.max_confidence = max_confidence
-        self.sample = sample
-        self.time = time
+        file_indentifiers = np.ones(shape=len(self.epochs))
+        epoch_start_times = [epoch.start_time for epoch in self.epochs]
+        stages = [epoch.stage for epoch in self.epochs]
+        max_confidences = [epoch.max_confidence for epoch in self.epochs]
+        epoch_start_samples = [epoch.start_sample for epoch in self.epochs]
 
+        self.sleep_stages = pd.DataFrame({
+            'FileIdentifier': file_indentifiers,
+            'EpochStartTime': epoch_start_times,
+            'SleepStage': stages,
+            'MaximumConfidence': max_confidences,
+            'EpochStartSample': epoch_start_samples
+        })
 
+        self.sleep_stages.to_csv(os.path.join(output_folder, filename), index=False)
+
+        return self.sleep_stages
+
+    def export_summary_output(self, output_folder: str, filename: str = 'Summary.csv'):
+
+        def _matlab_datenum_to_datetime(datenum):
+            return datetime(1, 1, 1) + timedelta(days=datenum)
+
+        # Identify file transitions or stage transitions between successive epochs
+        ic = (
+                (self.sleep_stages['SleepStage'] != self.sleep_stages['SleepStage'].shift()) |  # Sleep stage changes
+                (self.sleep_stages['FileIdentifier'] != self.sleep_stages['FileIdentifier'].shift())  # File identifier changes
+        )
+        # Add a True at the beginning to mark the first epoch as a transition
+        ic = pd.concat([pd.Series([True]), ic[1:]]).reset_index(drop=True)
+
+        # Extract rows where transitions occur
+        Sl = self.sleep_stages[ic].reset_index(drop=True)
+
+        # Get epoch count between each transition
+        icc = np.where(ic)[0]
+        icc = np.append(icc, len(ic))  # Add dummy index
+        icc = icc[1:] - icc[:-1]  # Calculate epoch counts
+
+        n_groups = Sl.shape[0]
+        file_list = [self._filepath.split('/')[-1]] * n_groups
+
+        sleep_stage_list = []
+        n_epochs_list = []
+        date_list = []
+        time_list = []
+        for i in range(n_groups):
+            sleep_stage_list.append(STAGENAMES[Sl.loc[i, 'SleepStage']])
+            n_epochs_list.append(icc[i])
+
+            dt = _matlab_datenum_to_datetime(Sl.loc[i, 'EpochStartTime'])
+            date_list.append(dt.strftime('%Y-%m-%d'))
+            time_list.append(dt.strftime('%H:%M:%S'))
+
+        self.summary = pd.DataFrame({
+            'File': file_list,
+            'Date': date_list,
+            'Time': time_list,
+            'Sleep stage': sleep_stage_list,
+            '# of epochs': n_epochs_list
+        })
+
+        self.summary.to_csv(os.path.join(output_folder, filename), index=False)
+
+        return self.summary
 
 
 
@@ -479,21 +551,23 @@ if __name__ == "__main__":
     filepath = r'../eeg_data/auditory_stimulation_P18_002_3min.edf'
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
 
-    cProfile.run('sleep_eeg_instance.compute_epoch_features()')
+    #cProfile.run('sleep_eeg_instance.compute_epoch_features()')
     features = sleep_eeg_instance.compute_epoch_features()
     features_preprocessed, nightly_features = sleep_eeg_instance.preprocess_features(features=features)
 
-    np.save(file='features_processed_full.npy', arr=features_preprocessed, allow_pickle=False)
-    loaded_processed = np.load(file='features_processed_full.npy')
-    np.array_equal(features_preprocessed, loaded_processed)
-
     parameters_directory = r'../model_parameters'
-    model_filename = r'Model_BEA_refactored.mat'
+    model_filename = r'Model_BEA_full.mat'
     model_filepath = os.path.join(parameters_directory, model_filename)
 
     gc_filename = r'GC_BEA.mat'
     gc_filepath = os.path.join(parameters_directory, gc_filename)
     matlab_model_import = MatlabModelImport(model_filepath=model_filepath, gc_filepath=gc_filepath)
 
-    channel_groups = sleep_eeg_instance.cluster_channels(nightly_features=features_preprocessed, gc=matlab_model_import.GC)
-    print('hi')
+    channel_groups = sleep_eeg_instance.cluster_channels(nightly_features=nightly_features,
+                                                         gc=matlab_model_import.GC)
+    sa, mm = sleep_eeg_instance.score_epochs(features=features_preprocessed,
+                                              models=matlab_model_import.models,
+                                              channel_groups=channel_groups)
+
+    sleep_stage = sleep_eeg_instance.export_sleep_stage_output(output_folder=r'../results', filename='SleepStage_3min.csv')
+    summary = sleep_eeg_instance.export_summary_output(output_folder=r'../results', filename='Summary_3min.csv')

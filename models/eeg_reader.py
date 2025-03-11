@@ -388,7 +388,7 @@ class EdfReader:
 
         data, times = self._raw_data.get_data(picks=chan_picks, start=start_sample, stop=end_sample, return_times=True)
 
-        return data*10e6, times, channels
+        return data*1e6, times, channels
 
     def extract_data_pyedflib(self, start_sample: int, stop_sample: int, chan_picks: list = None, digital: bool=False):
         """
@@ -510,7 +510,7 @@ class EdfReader:
 
 
 if __name__ == "__main__":
-    filepath = r'eeg_data/auditory_stimulation_P18_002.edf'
+    filepath = r'../eeg_data/auditory_stimulation_P18_002.edf'
     edf = EdfReader(filepath)
     edf.clean_channel_names()
 

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import h5py
 
-from eeg_reader import EdfReader
+from models.eeg_reader import EdfReader
 
 if os.getcwd().split('\\')[-1] == 'test':
     os.chdir("..")  # Go one directory up
