@@ -2,6 +2,7 @@ import warnings
 import logging
 import typing as t
 import os
+import cProfile
 
 from scipy.ndimage import uniform_filter1d
 from tqdm import tqdm
@@ -9,7 +10,6 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from scipy import signal
-from matplotlib import pyplot as plt
 
 from eeg_reader import EdfReader, EEG, Montage, Channel
 from models.MatlabModelImport import MatlabModelImport, ClassificationTree
@@ -239,6 +239,7 @@ class SleepSEEG:
         self.montage_type = 'referential'
         self.epochs = None
         self.epochs_preprocessed = False
+        self.sleep_stage = None
 
     def read_initial_buffer(self, time_window: float = 2.5):
         window_center = self._edf.start_time_sample
@@ -265,22 +266,17 @@ class SleepSEEG:
             # Read epoch
             epoch = self.get_epoch_by_index(epoch_index=epoch_index)
 
-            # plt.plot(epoch.data[0])
-            # plt.show()
-
             # Make bipolar montage
             epoch.make_bipolar_montage()
 
             # Preprocess epoch
             epoch.change_sampling_rate()
-            # plt.plot(epoch.data[0])
-            # plt.show()
             epoch.trim(n_samples_from_start=int(0.25*epoch.fs), n_samples_to_end=int(0.25*epoch.fs))
             epoch.mean_normalize()
 
             # Compute epoch features
             features_list.append(epoch.compute_features())
-        np.array(features_list).transpose(2, 1, 0)
+
         return np.array(features_list).transpose(2, 1, 0)
 
     def read_epoch(self, start_sample: int, end_sample: int = None, epoch_duration: float = None):
@@ -320,57 +316,6 @@ class SleepSEEG:
                 upper_bound = q3 + 2.5 * iqr
                 outliers = (feat < lower_bound) | (feat > upper_bound) | idx_nan
                 features[feat_idx, chan_idx, outliers] = np.nan
-        return features
-
-    @staticmethod
-    def movmean(features, window_size: int, nanflag='includenan'):
-        """
-        Python equivalent of MATLAB's movmean function.
-
-        Parameters:
-            array: Input array.
-            window_size: Window size. If a list, it should be [kb, kf].
-            dim (int): Dimension along which to operate. If None, operates along the first non-singleton dimension.
-            nanflag (str): 'includenan' to include NaNs, 'omitnan' to ignore NaNs.
-            SamplePoints (numpy.ndarray): Sample points for weighted averaging (not implemented here).
-
-        Returns:
-            numpy.ndarray: Array of local k-point mean values.
-        """
-
-        nf = features.shape[0]
-        nch = features.shape[1]
-        for feat_idx in range(nf):
-            for chan_idx in range(nch):
-                feat = features[feat_idx, chan_idx, :].copy()
-                # Handle window size
-                kb = window_size // 2
-
-                # Handle NaN values
-                if nanflag == 'omitnan':
-                    array_with_no_nans = np.where(np.isnan(feat), 0, feat)  # Replace NaNs with 0 for calculation
-                    count = np.ones_like(array_with_no_nans)  # Count of non-NaN elements
-                    count[np.isnan(array_with_no_nans)] = 0
-                else:
-                    count = np.ones_like(feat)
-
-                # Apply uniform_filter1d for sliding window mean
-                def apply_filter(arr):
-                    return uniform_filter1d(arr, window_size, mode='wrap', origin=-(kb))
-
-                # Apply along the specified dimension
-                M = np.apply_along_axis(apply_filter, 0, feat)
-                valid_count = np.apply_along_axis(apply_filter, 0, count)
-
-                # Normalize to handle edge cases and NaN omission
-                M = M / valid_count
-
-                # Restore NaNs if needed
-                if nanflag == 'omitnan':
-                    M[valid_count == 0] = np.nan
-
-                features[feat_idx, chan_idx, :] = M
-
         return features
 
     @staticmethod
@@ -448,17 +393,93 @@ class SleepSEEG:
 
         return channel_groups
 
-    def score_channels(self):
-        return
+    def score_epochs(self, features, models: t.List[t.List[ClassificationTree]], channel_groups):
+        """
+        For each cluster group, find channels that belong to that group
+        Extract their features, reshape them, remove rows that have only NaNs
+        Apply the four machine learning models to predict probabilities prob
+        Compute average posterior probabilities: output is confidence, the normalized probabilities
+
+        :param features: (N_features x N_channels x N_epochs)
+        :param models:
+        :param channel_groups:
+        :return:
+        """
+
+        def _compute_confidence(prob):
+            """
+            Computes the final confidence matrix by averaging across channels and normalizing.
+            """
+            prop = np.nanmean(prob, axis=0)  # Average over channels
+            prop[:, :4] /= np.sum(prop[:, :4], axis=1, keepdims=True)  # Normalize first 4 columns
+            confidence = prop
+            return confidence
+
+        def _score_channels(models, features, logger):
+            n_features, n_channels, n_epochs = features.shape
+            n_stages = 7
+            feat = np.transpose(features, (1, 2, 0))
+            postprob = np.zeros(shape=(n_channels, n_epochs, n_stages))
+            clusters = np.unique(channel_groups).astype(int)
+            logger.info(msg=f"{len(clusters)} clusters found.")
+            for cluster_idx in tqdm(clusters, "Computing probabilities for cluster"):
+                ik = channel_groups == cluster_idx
+                if np.any(ik):
+                    fe = feat[ik, :, :].reshape(np.count_nonzero(ik) * n_epochs, n_features)
+                    del_rows = np.all(np.isnan(fe), axis=1)  # Rows with all NaNs
+
+                    prob = np.full((fe.shape[0], 7), np.nan)  # Initialize probabilities
+
+                    # Predict using each model
+                    prob[~del_rows, :4] = models[cluster_idx][0].predict_proba_deepseek(fe[~del_rows])
+                    prob[~del_rows, 4] = models[cluster_idx][1].predict_proba_deepseek(fe[~del_rows])[:, 0]
+                    prob[~del_rows, 5] = models[cluster_idx][2].predict_proba_deepseek(fe[~del_rows])[:, 0]
+                    prob[~del_rows, 6] = models[cluster_idx][3].predict_proba_deepseek(fe[~del_rows])[:, 0]
+
+                    # Reshape and assign to postprob
+                    postprob[ik] = prob.reshape(-1, n_epochs, 7)
+                return postprob
+
+        def _define_stage(confidence):
+            # Define stage for each epoch
+            mm = np.max(confidence[:, :4], axis=1)  # maximum confidence value
+            sa = np.argmax(confidence[:, :4], axis=1) + 1  # stage index
+
+            # handle nans
+            sa[np.isnan(mm)] = 2
+            mm[np.isnan(mm)] = 0
+
+            sa[sa > 2] += 1
+
+            # adjust stage based on confidence thresholds
+            sa[(sa == 1) & (confidence[:, 4] < 0.5)] = 3
+            sa[(sa == 2) & (confidence[:, 5] < 0.5)] = 3
+            sa[(sa == 4) & (confidence[:, 6] < 0.5)] = 3
+
+            return sa, mm
+
+        postprob = _score_channels(models=models, features=features, logger=self.logger)
+        confidence = _compute_confidence(prob=postprob)
+        sa, mm = _define_stage(confidence=confidence)
+        return sa, mm
+
+
+class SleepStage:
+    def __init__(self, stage, max_confidence, sample, time):
+        self.stage=stage
+        self.max_confidence = max_confidence
+        self.sample = sample
+        self.time = time
 
 
 
 
 
 if __name__ == "__main__":
-    filepath = r'../eeg_data/auditory_stimulation_P18_002.edf'
+    filepath = r'../eeg_data/auditory_stimulation_P18_002_3min.edf'
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
 
+    cProfile.run('sleep_eeg_instance.compute_epoch_features()')
     features = sleep_eeg_instance.compute_epoch_features()
     features_preprocessed, nightly_features = sleep_eeg_instance.preprocess_features(features=features)
 

@@ -27,11 +27,12 @@ class TestSleepSEEG(unittest.TestCase):
     features_smoothed_normalized_file = r'matlab_files/features_smoothed_normalized_v2_time.mat'
     features_unprocessed_all_file = r'matlab_files/features_unprocessed_v2_time.mat'
     features_processed_all_file = r'matlab_files/features_processed_v2_time.mat'
+    nightly_features_processed_matlab_file = r'matlab_files/featfeat.mat'
     nightly_features_all_file = r'matlab_files/nightly_features_v2_time.mat'
     channel_groups_file = r'matlab_files/channel_groups.mat'
 
     parameters_directory = r'model_parameters'
-    model_filename = r'Model_BEA_refactored.mat'
+    model_filename = r'Model_BEA_full.mat'
     model_filepath = os.path.join(parameters_directory, model_filename)
 
     gc_filename = r'GC_BEA.mat'
@@ -62,17 +63,21 @@ class TestSleepSEEG(unittest.TestCase):
             features_unprocessed_matlab = list(file['feature'])
         features_unprocessed_matlab = np.array(features_unprocessed_matlab)
         cls.features_unprocessed_matlab = np.transpose(features_unprocessed_matlab, (0, 2, 1))
-        with h5py.File(cls.features_processed_all_file, 'r') as file:
-            features_processed_matlab = list(file['featfeat'])
-        cls.features_processed_matlab = np.array(features_processed_matlab)
+        with h5py.File(cls.nightly_features_processed_matlab_file, 'r') as file:
+            nightly_features_processed_matlab = list(file['featfeat'])
+        cls.nightly_features_processed_matlab = np.array(nightly_features_processed_matlab)
         with h5py.File(cls.nightly_features_all_file, 'r') as file:
             nightly_features_matlab = list(file['featfeat'])
         cls.nightly_features_matlab = np.array(nightly_features_matlab)
         with h5py.File(cls.channel_groups_file, 'r') as file:
             channel_groups_matlab = list(file['ch_gr'])
         cls.channel_groups_matlab = np.array(channel_groups_matlab)
+        with h5py.File(cls.features_processed_all_file, 'r') as file:
+            features_processed_matlab = list(file['feature'])
+        cls.features_processed_matlab = np.transpose(np.array(features_processed_matlab), (0, 2, 1))
         cls.features_smoothed_matlab = np.transpose(features_smoothed_matlab, (0, 2, 1))
         cls.sleepseeg_3min = SleepSEEG(filepath=cls.data_file_3min)
+        cls.sleepseeg = SleepSEEG(filepath=cls.full_data_file)
 
         cls.matlab_model_import = MatlabModelImport(model_filepath=cls.model_filepath, gc_filepath=cls.gc_filepath)
 
@@ -85,8 +90,8 @@ class TestSleepSEEG(unittest.TestCase):
 
     def test_compute_features(self):
         # TODO: issue with compute features
-        self.sleepseeg_3min.compute_epoch_features()
-        self.assertTrue(np.allclose(self.sleepseeg_3min.features, self.features_matlab, rtol=0.01))
+        features = self.sleepseeg.compute_epoch_features()
+        self.assertTrue(np.allclose(features, self.features_unprocessed_matlab, rtol=0.01))
 
     def test_remove_outliers(self):
         features_without_outliers_python = self.sleepseeg_3min.remove_outliers(features=self.features_matlab)
@@ -103,15 +108,22 @@ class TestSleepSEEG(unittest.TestCase):
     def test_preprocess_features(self):
         # TODO : find why some values differ more than 5%
         _, nightly_features_python = self.sleepseeg_3min.preprocess_features(features=self.features_unprocessed_matlab)
-        self.assertTrue(np.allclose(nightly_features_python, self.features_processed_matlab, rtol=0.6))
+        self.assertTrue(np.allclose(nightly_features_python, self.nightly_features_processed_matlab, rtol=0.6))
 
     def test_cluster_channels(self):
         channel_groups_python = self.sleepseeg_3min.cluster_channels(
-            nightly_features=self.features_processed_matlab,
+            nightly_features=self.nightly_features_processed_matlab,
             gc=self.matlab_model_import.GC
         )
 
         self.assertTrue(np.all(np.equal(channel_groups_python, self.channel_groups_matlab - 1)))
+
+    def test_score_channels(self):
+        sa, mm = self.sleepseeg_3min.score_epochs(features=self.features_processed_matlab,
+                                                             models=self.matlab_model_import.models,
+                                                             channel_groups=self.channel_groups_matlab[0] - 1)
+        print('hey')
+
 
 class TestEpoch(unittest.TestCase):
     epoch_0_file = r'matlab_files/epoch_0_LTP1.mat'
