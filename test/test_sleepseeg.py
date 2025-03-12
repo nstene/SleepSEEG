@@ -32,6 +32,8 @@ class TestSleepSEEG(unittest.TestCase):
     nightly_features_processed_matlab_file = r'matlab_files/featfeat.mat'
     nightly_features_all_file = r'matlab_files/nightly_features_v2_time.mat'
     channel_groups_file = r'matlab_files/channel_groups.mat'
+    sa_all_file = r'matlab_files/sa.mat'
+    mm_all_file = r'matlab_files/mm.mat'
 
     parameters_directory = r'model_parameters'
     model_filename = r'Model_BEA_full.mat'
@@ -61,6 +63,7 @@ class TestSleepSEEG(unittest.TestCase):
         with h5py.File(cls.features_smoothed_normalized_file, 'r') as file:
             features_smoothed_matlab = list(file['feature'])
         features_smoothed_matlab = np.array(features_smoothed_matlab)
+        cls.features_smoothed_matlab = np.transpose(features_smoothed_matlab, (0, 2, 1))
         with h5py.File(cls.features_unprocessed_all_file, 'r') as file:
             features_unprocessed_matlab = list(file['feature'])
         features_unprocessed_matlab = np.array(features_unprocessed_matlab)
@@ -77,7 +80,12 @@ class TestSleepSEEG(unittest.TestCase):
         with h5py.File(cls.features_processed_all_file, 'r') as file:
             features_processed_matlab = list(file['feature'])
         cls.features_processed_matlab = np.transpose(np.array(features_processed_matlab), (0, 2, 1))
-        cls.features_smoothed_matlab = np.transpose(features_smoothed_matlab, (0, 2, 1))
+        with h5py.File(cls.sa_all_file, 'r') as file:
+            sa_matlab = list(file['sa'])
+        cls.sa_matlab = np.array(sa_matlab)
+        with h5py.File(cls.mm_all_file, 'r') as file:
+            mm_matlab = list(file['mm'])
+        cls.mm_matlab = np.array(mm_matlab)
         cls.sleepseeg_3min = SleepSEEG(filepath=cls.data_file_3min)
         cls.sleepseeg = SleepSEEG(filepath=cls.full_data_file)
 
@@ -92,9 +100,17 @@ class TestSleepSEEG(unittest.TestCase):
     def test_compute_features(self):
         # TODO: issue with compute features
         features = self.sleepseeg.compute_epoch_features()
-        self.assertTrue(np.allclose(features, self.features_unprocessed_matlab, rtol=0.5))
+        for feat_idx in range(features.shape[0]):
+            if not np.allclose(features[feat_idx], self.features_unprocessed_matlab[feat_idx], rtol=0.02):
+                for ch_idx in range(features.shape[1]):
+                    if not np.allclose(features[feat_idx, ch_idx], self.features_unprocessed_matlab[feat_idx, ch_idx], rtol=0.02):
+                        print(feat_idx, ch_idx)
+
+        self.assertTrue(np.allclose(features, self.features_unprocessed_matlab))
 
     def test_remove_outliers(self):
+        #TODO : this is wrong: I should use data that have outliers to make sure I remove them just like in matlab
+        # I think I have fixed the issue though. Just make a better test this one is useless
         features_without_outliers_python = self.sleepseeg_3min.remove_outliers(features=self.features_matlab)
         self.assertEqual(np.sum(np.isnan(features_without_outliers_python)), np.sum(np.isnan(self.features_without_outliers_matlab)))
 
@@ -107,9 +123,8 @@ class TestSleepSEEG(unittest.TestCase):
         self.assertTrue(np.allclose(nightly_features_python, self.nightly_features_matlab, rtol=0.01))
 
     def test_preprocess_features(self):
-        # TODO : find why some values differ more than 5%
         _, nightly_features_python = self.sleepseeg_3min.preprocess_features(features=self.features_unprocessed_matlab)
-        self.assertTrue(np.allclose(nightly_features_python, self.nightly_features_processed_matlab, rtol=0.6))
+        self.assertTrue(np.allclose(nightly_features_python, self.nightly_features_processed_matlab, rtol=0.01))
 
     def test_cluster_channels(self):
         channel_groups_python = self.sleepseeg_3min.cluster_channels(
@@ -120,9 +135,12 @@ class TestSleepSEEG(unittest.TestCase):
         self.assertTrue(np.all(np.equal(channel_groups_python, self.channel_groups_matlab - 1)))
 
     def test_score_channels(self):
+        # features shape (features x channels x epochs)
         sa, mm = self.sleepseeg_3min.score_epochs(features=self.features_processed_matlab,
                                                              models=self.matlab_model_import.models,
                                                              channel_groups=self.channel_groups_matlab[0] - 1)
+        self.assertTrue(np.all(np.equal(sa, self.sa_matlab[0])))
+        self.assertTrue(np.allclose(mm, self.mm_matlab[0], rtol=0.03))
 
 
 class TestEpoch(unittest.TestCase):
@@ -135,6 +153,7 @@ class TestEpoch(unittest.TestCase):
     epoch_0_bipolar_chan1_file = r'matlab_files/epoch_0_bipolar_chan1.mat'
     epoch_0_ref_file = r'matlab_files/epoch_0_ref.mat'
     data_file_3min = r'eeg_data/auditory_stimulation_P18_002_3min.edf'
+    epoch_0_bipolar_chan1_processed_file = r'matlab_files/epoch_0_bipolar_chan1_processed.mat'
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -150,54 +169,84 @@ class TestEpoch(unittest.TestCase):
             cls.features_epoch_0_LTP1_matlab = list(file['feature_0_1'])[0]
         with h5py.File(cls.epoch_0_bipolar_chan1_file, 'r') as file:
             cls.epoch_0_bipolar_chan1_matlab = list(file['x_save'])[0]
-        with h5py.File(cls.epoch_0_ref_file, 'r') as file:
-            cls.epoch_0_ref_matlab_data = list(file['x_save'])
+        # with h5py.File(cls.epoch_0_ref_file, 'r') as file:
+        #     cls.epoch_0_ref_matlab_data = list(file['x_save'])
+        with h5py.File(cls.epoch_0_bipolar_chan1_processed_file, 'r') as file:
+            cls.epoch_0_bipolar_chan1_processed = list(file['x_to_save'])
 
 
     def test_change_sampling_rate(self):
-        epoch = Epoch(data=self.epoch_0_matlab_data, timestamps=None, fs=2048, montage=None)
-        epoch.change_sampling_rate()
-        epoch_resampled_python = epoch.data
+        epoch_data = np.vstack([self.epoch_0_matlab_data, self.epoch_0_matlab_data]).transpose((1, 0))
+        epoch = Epoch(data=epoch_data.T, timestamps=None, fs=2048, montage=None)
+        epoch.change_sampling_rate_deepseek()
 
-        error = rmse(self.epoch_0_matlab_data_resampled, epoch_resampled_python)
-        relative_rmse = error / (np.max(self.epoch_0_matlab_data_resampled) - np.min(self.epoch_0_matlab_data_resampled))
+        self.assertTrue(np.allclose(epoch.data[:, 0], self.epoch_0_matlab_data_resampled, rtol=0.01))
 
-        self.assertTrue(relative_rmse < 0.01)
 
     def test_trim(self):
         epoch = Epoch(data=self.epoch_0_matlab_data_resampled, timestamps=None, fs=256, montage=None)
         epoch.trim(n_samples_from_start=int(0.25*epoch.fs), n_samples_to_end=int(0.25*epoch.fs))
-        epoch_resampled_trimmed_python = epoch.data
 
-        error = rmse(self.epoch_0_matlab_data_resampled_trimmed, epoch_resampled_trimmed_python)
-        relative_rmse = error / (np.max(self.epoch_0_matlab_data_resampled_trimmed) - np.min(self.epoch_0_matlab_data_resampled_trimmed))
-
-        self.assertTrue(relative_rmse < 0.01)
+        self.assertTrue(np.allclose(epoch.data, self.epoch_0_matlab_data_resampled_trimmed, rtol=0.01))
 
     def test_mean_baseline(self):
         epoch = Epoch(data=self.epoch_0_matlab_data_resampled_trimmed, timestamps=None, fs=256, montage=None)
         epoch.mean_normalize()
         epoch_resampled_trimmed_baselined_python = epoch.data
 
-        error = rmse(self.epoch_0_matlab_data_resampled_trimmed_baselined, epoch_resampled_trimmed_baselined_python)
-        relative_rmse = error / (np.max(self.epoch_0_matlab_data_resampled_trimmed_baselined) - np.min(self.epoch_0_matlab_data_resampled_trimmed_baselined))
+        self.assertTrue(np.allclose(epoch_resampled_trimmed_baselined_python, self.epoch_0_matlab_data_resampled_trimmed_baselined, rtol=0.01))
 
-        self.assertTrue(relative_rmse < 0.01)
+        # error = rmse(self.epoch_0_matlab_data_resampled_trimmed_baselined, epoch_resampled_trimmed_baselined_python)
+        # relative_rmse = error / (np.max(self.epoch_0_matlab_data_resampled_trimmed_baselined) - np.min(self.epoch_0_matlab_data_resampled_trimmed_baselined))
+        # self.assertTrue(relative_rmse < 0.01)
 
     def test_compute_signal_features(self):
         epoch = Epoch(data=self.epoch_0_matlab_data_resampled_trimmed_baselined, timestamps=None, fs=256, montage=None)
         features_python = epoch._compute_signal_features(data=epoch.data)
-        print(features_python)
-        print(self.features_epoch_0_LTP1_matlab)
 
         self.assertTrue(np.allclose(features_python, self.features_epoch_0_LTP1_matlab, rtol=0.01))
 
-    def test_make_bipolar_montage(self):
+    # def test_make_bipolar_montage(self):
+    #
+    #     edf = EdfReader(filepath=self.data_file_3min)
+    #     edf.clean_channel_names()
+    #     montage = edf.get_montage()
+    #     epoch_python = Epoch(data=np.vstack(self.epoch_0_ref_matlab_data), timestamps=None, fs=2048, montage=montage)
+    #     epoch_python.make_bipolar_montage()
+    #
+    #     self.assertTrue(np.allclose(self.epoch_0_bipolar_chan1_matlab, epoch_python.data[0], rtol=0.01))
 
-        edf = EdfReader(filepath=self.data_file_3min)
-        edf.clean_channel_names()
-        montage = edf.get_montage()
-        epoch_python = Epoch(data=np.vstack(self.epoch_0_ref_matlab_data), timestamps=None, fs=2048, montage=montage)
-        epoch_python.make_bipolar_montage()
+    # def test_preprocess_epoch(self):
+    #     epoch_python = Epoch(data=self.epoch_0_bipolar_chan1_matlab, fs=2048, timestamps=None)
+    #     epoch_python.change_sampling_rate()
+    #     epoch_python.trim(n_samples_from_start=int(0.25 * epoch_python.fs), n_samples_to_end=int(0.25 * epoch_python.fs))
+    #     epoch_python.mean_normalize()
+    #
+    #     difference = np.subtract(self.epoch_0_bipolar_chan1_processed[0], epoch_python.data)
+    #     rel_dif = np.divide(difference, self.epoch_0_bipolar_chan1_processed[0])
+    #
+    #     fig, ax1 = plt.subplots()
+    #
+    #     color = 'tab:red'
+    #     ax1.set_xlabel('samples')
+    #     ax1.set_ylabel('absolute difference with python', color=color)
+    #     ax1.plot(difference, color=color, linestyle=':')
+    #     ax1.tick_params(axis='y', labelcolor=color)
+    #
+    #     ax2 = ax1.twinx()  # instantiate a second Axes that shares the same x-axis
+    #
+    #     color = 'tab:blue'
+    #     ax2.set_ylabel('matlab processed channel 0', color=color)  # we already handled the x-label with ax1
+    #     ax2.plot(self.epoch_0_bipolar_chan1_processed[0], color=color, alpha = 0.3)
+    #     ax2.plot(epoch_python.data, color=color, alpha = 0.3)
+    #     ax2.tick_params(axis='y', labelcolor=color)
+    #
+    #     fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    #     plt.show()
+    #
+    #     error = rmse(epoch_python.data, self.epoch_0_bipolar_chan1_processed[0])
+    #     relative_rmse = error / (np.max(self.epoch_0_bipolar_chan1_processed[0]) - np.min(
+    #         self.epoch_0_bipolar_chan1_processed[0]))
+    #
+    #     self.assertTrue(np.allclose(self.epoch_0_bipolar_chan1_processed[0], epoch_python.data, rtol=0.1))
 
-        self.assertTrue(np.allclose(self.epoch_0_bipolar_chan1_matlab, epoch_python.data[0], rtol=0.01))

@@ -27,7 +27,7 @@ class MatlabModelImport:
             for possibility_index in range(0, self._NUMBER_POSSIBILITIES):
 
 
-                children = MODEL_BEA_MATLAB[feature_index, possibility_index]['Children'][0][0].astype(int)
+                children = MODEL_BEA_MATLAB[feature_index, possibility_index]['Children'][0][0].astype(int) - 1
                 cut_predictor = [el[0].item() if el[0].size > 0 else None for el in MODEL_BEA_MATLAB[feature_index, possibility_index]['CutPredictor'][0][0]]
                 cut_predictor_index = [el[0].astype(int) - 1 for el in MODEL_BEA_MATLAB[feature_index, possibility_index]['CutPredictorIndex'][0][0]]
                 cut_point = [el[0].astype(float) for el in MODEL_BEA_MATLAB[feature_index, possibility_index]['CutPoint'][0][0]]
@@ -117,12 +117,12 @@ class ClassificationTree:
 
         for i in range(n_samples):
             node = 0  # Start at the root node
-            while self.children[node, 0] != 0:  # While not a leaf node
+            while self.children[node, 0] != -1:  # While not a leaf node
                 feature_idx = self.cut_predictor_index[node]  # Feature index for splitting
                 if features[i, feature_idx] <= self.cut_point[node]:
-                    node = self.children[node, 0] - 1  # Go to left child
+                    node = self.children[node, 0]  # Go to left child
                 else:
-                    node = self.children[node, 1] - 1  # Go to right child
+                    node = self.children[node, 1]  # Go to right child
             proba[i] = self.class_prob[node]  # Use class probabilities at the leaf node
 
         return proba

@@ -4,11 +4,13 @@ import os
 from datetime import datetime, timedelta
 
 from scipy.ndimage import uniform_filter1d
+from scipy.signal import firwin, lfilter
 from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
 from scipy import signal
+from matplotlib import pyplot as plt
 
 from models.eeg_reader import EdfReader, EEG, Montage
 from models.MatlabModelImport import MatlabModelImport, ClassificationTree
@@ -18,7 +20,7 @@ STAGENAMES = {1: 'R', 2: 'W', 3: 'N1', 4: 'N2', 5: 'N3'}
 
 
 class Epoch(EEG):
-    def __init__(self, data, timestamps, fs, montage: Montage = None):
+    def __init__(self, data, fs, timestamps=None, montage: Montage = None):
         super().__init__(data=data, timestamps=timestamps, montage=montage)
         self.timestamps = timestamps
         self.fs = fs
@@ -40,7 +42,6 @@ class Epoch(EEG):
 
     def change_sampling_rate(self):
         """The resulting sample rate is up / down times the original sample rate.
-
         """
         target_fs = 256
         up = target_fs
@@ -53,8 +54,206 @@ class Epoch(EEG):
         self.fs = target_fs
         return
 
+    def change_sampling_rate_2(self):
+        resample_factors = {
+            200: (8, 20),  # Equivalent to x2 up, x5 down, x4 up, x5 down
+            256: (1, 1),  # No change
+            500: (32, 125),  # Equivalent to x4 up, x5 down, x4 up, x5 down, x4 up, x5 down
+            512: (1, 2),  # Downsample x2
+            1000: (8, 20),  # Equivalent to x2 up, x5 down, x4 up, x5 down, x4 up, x5 down
+            1024: (1, 4),  # Downsample x2 twice
+            2000: (8, 40),  # Equivalent to x5 down, x4 up, x5 down, x4 up, x5 down
+            2048: (1, 8)  # Downsample x2 three times
+        }
+
+        if round(self.fs) not in resample_factors:
+            raise ValueError(
+                f"Error: Sampling rate {self.fs} not supported. Supported rates: {list(resample_factors.keys())}")
+
+        up, down = resample_factors[round(self.fs)]
+        self._data = self.matlab_resample(self._data, up, down)
+        self.fs = 256
+
+    @staticmethod
+    def matlab_resample(X, up, down):
+        # Design a low-pass FIR filter similar to MATLAB
+        GCD = np.gcd(up, down)
+        up, down = up // GCD, down // GCD  # Reduce fraction
+
+        # MATLAB uses a Kaiser window with β=5 (standard value in MATLAB's resample)
+        num_taps = 10 * max(up, down)  # Filter length (MATLAB default)
+        beta = 5  # Kaiser window beta
+
+        h = firwin(num_taps, 1.0 / max(up, down), window=('kaiser', beta))
+
+        # Upsample by inserting zeros
+        X_up = np.zeros((len(X) * up, *X.shape[1:]))
+        X_up[::up] = X  # Insert zeros in between
+
+        # Apply the FIR filter
+        X_filt = lfilter(h, 1.0, X_up, axis=0)
+
+        # Downsample by selecting every `down`-th sample
+        X_resampled = X_filt[::down]
+
+        return X_resampled
+
+    def change_sampling_rate_deepseek(self):
+        # Define the filter coefficients
+        od5 = 54
+        od2 = 26
+        ou2 = 34
+
+        hd5 = np.array([
+            -0.000413312132792, 0.000384910656353, 0.000895384486596, 0.001426584098180, 0.001572675788393,
+            0.000956099017099, -0.000559378457343, -0.002678217568221, -0.004629975982837, -0.005358589238386,
+            -0.003933117464092, -0.000059710059922, 0.005521319363883, 0.010983495478404, 0.013840996082966,
+            0.011817315106321, 0.003905283425021, -0.008768844009700, -0.022682212400564, -0.032498023687148,
+            -0.032456772047175, -0.018225658085891, 0.011386634156651, 0.053456542440034, 0.101168250947271,
+            0.145263694388270, 0.176384224234024, 0.187607302744229, 0.176384224234024, 0.145263694388270,
+            0.101168250947271, 0.053456542440034, 0.011386634156651, -0.018225658085891, -0.032456772047175,
+            -0.032498023687148, -0.022682212400564, -0.008768844009700, 0.003905283425021, 0.011817315106321,
+            0.013840996082966, 0.010983495478404, 0.005521319363883, -0.000059710059922, -0.003933117464092,
+            -0.005358589238386, -0.004629975982837, -0.002678217568221, -0.000559378457343, 0.000956099017099,
+            0.001572675788393, 0.001426584098180, 0.000895384486596, 0.000384910656353, -0.000413312132792
+        ])
+
+        hd2 = np.array([
+            0.001819877350937, 0.000000000000000, -0.005222562671417, -0.000000000000000, 0.012064004143824,
+            0.000000000000000, -0.024375517671448, -0.000000000000001, 0.046728257943321, 0.000000000000001,
+            -0.095109546093322, -0.000000000000001, 0.314496714630999, 0.500000000000001, 0.314496714630999,
+            -0.000000000000001, -0.095109546093322, 0.000000000000001, 0.046728257943321, -0.000000000000001,
+            -0.024375517671448, 0.000000000000000, 0.012064004143824, -0.000000000000000, -0.005222562671417,
+            0.000000000000000, 0.001819877350937
+        ])
+
+        hu2 = np.array([
+            -0.000436344318144, 0.000871220095338, 0.002323148230146, 0.002161775863027, -0.001491947315250,
+            -0.006921578214988, -0.008225251275241, -0.000175549247298, 0.014346107990165, 0.022307211309135,
+            0.009627222866552, -0.023067228777693, -0.052048618204333, -0.041386934088038, 0.030232588120746,
+            0.146540456844067, 0.255673093905358, 0.300317753050023, 0.255673093905358, 0.146540456844067,
+            0.030232588120746, -0.041386934088038, -0.052048618204333, -0.023067228777693, 0.009627222866552,
+            0.022307211309135, 0.014346107990165, -0.000175549247298, -0.008225251275241, -0.006921578214988,
+            -0.001491947315250, 0.002161775863027, 0.002323148230146, 0.000871220095338, -0.000436344318144
+        ])
+
+        fs = round(self.fs)
+
+        X = self.data.T
+
+        if fs == 200:
+            z = np.zeros((ou2 // 2, X.shape[1]))
+            X = 2 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X)], axis=1), (2 * X.shape[0], X.shape[1])))
+            X = lfilter(hu2, 1, np.vstack([X, z]))  # Filter
+            X = X[ou2 // 2:, :]  # Remove delay
+            z = np.zeros((od5 // 2, X.shape[1]))
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+
+        elif fs == 256:
+            # No change necessary
+            pass
+
+        elif fs == 500:
+            z = np.zeros((od5 // 2, X.shape[1]))
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+
+        elif fs == 512:
+            z = np.zeros((od2 // 2, X.shape[1]))
+            X = lfilter(hd2, 1, np.vstack([X, z]))  # Filter
+            X = X[od2 // 2:, :]  # Remove delay
+            X = X[::2, :]  # Downsample x2
+
+        elif fs == 1000:
+            z = np.zeros((od5 // 2, X.shape[1]))
+            X = 2 * np.reshape(
+                np.transpose(np.stack([X, np.zeros_like(X)], axis=1), (2 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+
+        elif fs == 1024:
+            z = np.zeros((od2 // 2, X.shape[1]))
+            X = lfilter(hd2, 1, np.vstack([X, z]))  # Filter
+            X = X[od2 // 2:, :]  # Remove delay
+            X = X[::2, :]  # Downsample x2
+            X = lfilter(hd2, 1, np.vstack([X, z]))  # Filter
+            X = X[od2 // 2:, :]  # Remove delay
+            X = X[::2, :]  # Downsample x2
+
+        elif fs == 2000:
+            z = np.zeros((od5 // 2, X.shape[1]))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+            X = 4 * np.reshape(np.transpose(np.stack([X, np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)], axis=1),
+                                            (4 * X.shape[0], X.shape[1])))
+            X = lfilter(hd5, 1, np.vstack([X, z]))  # Filter
+            X = X[od5 // 2:, :]  # Remove delay
+            X = X[::5, :]  # Downsample x5
+
+        elif fs == 2048:
+            od2 = len(hd2)  # Filter order
+            z = np.zeros((od2 // 2, X.shape[1]))  # Zero padding
+
+            # Apply the filter and downsample iteratively
+            X = lfilter(hd2, 1, np.vstack([X, z]), axis=0)  # Filter
+            X = X[od2 // 2:]  # Remove initial transient
+            X = X[::2]  # Downsample by 2
+
+            X = lfilter(hd2, 1, np.vstack([X, z]), axis=0)
+            X = X[od2 // 2:]
+            X = X[::2]
+
+            X = lfilter(hd2, 1, np.vstack([X, z]), axis=0)
+            X = X[od2 // 2:]
+            X = X[::2]
+
+        else:
+            raise ValueError(f"Unsupported sampling rate: {fs}")
+        self._data = X.T
+        self.fs = 256
+        return
+
     def mean_normalize(self):
-        normalized_data = self._data - np.mean(self._data, axis=0)
+        normalized_data = self._data - np.tile(np.mean(self._data, axis=1), (self._data.shape[1], 1)).T
         self._data = normalized_data
         return
 
@@ -280,7 +479,7 @@ class SleepSEEG:
             epoch.make_bipolar_montage()
 
             # Preprocess epoch
-            epoch.change_sampling_rate()
+            epoch.change_sampling_rate_deepseek()
             epoch.trim(n_samples_from_start=int(0.25*epoch.fs), n_samples_to_end=int(0.25*epoch.fs))
             epoch.mean_normalize()
 
@@ -310,6 +509,7 @@ class SleepSEEG:
     def remove_outliers(features: np.ndarray):
         """Remove outliers.
         """
+        window_size = 10
         nf = features.shape[0]
         nch = features.shape[1]
         for feat_idx in range(nf):
@@ -317,10 +517,10 @@ class SleepSEEG:
                 feat = features[feat_idx, chan_idx, :].copy()
                 idx_nan = np.isnan(feat)
                 feat = np.delete(arr=feat, obj=idx_nan)
-                mov_avg = uniform_filter1d(feat, size=min(feat.shape[0], 10), axis=0, mode="wrap")
+                mov_avg = pd.Series(feat).rolling(window=window_size, min_periods=1, center=True).mean().to_numpy()
                 feat = feat - mov_avg
-                q3 = np.percentile(feat, 75, method='lower', axis=0)
-                q1 = np.percentile(feat, 25, method='lower', axis=0)
+                q3 = np.percentile(feat, 75, method='closest_observation', axis=0)
+                q1 = np.percentile(feat, 25, method='closest_observation', axis=0)
                 iqr = q3 - q1
                 lower_bound = q1 - 2.5 * iqr
                 upper_bound = q3 + 2.5 * iqr
@@ -345,7 +545,7 @@ class SleepSEEG:
                 feat_copy = feat_copy[~idx_nan]
                 filtered_feature = pd.Series(feat_copy).rolling(window=window_size, min_periods=1, center=True).mean().to_numpy()
                 feat[~idx_nan] = filtered_feature
-                features_smoothed_normalized[feat_idx, chan_idx, :] = (feat - np.nanmean(feat)) / (np.nanstd(feat))
+                features_smoothed_normalized[feat_idx, chan_idx, :] = (feat - np.nanmean(feat)) / (np.nanstd(feat, ddof=1)) # ddof =1 to match matlab's sample standard deviation (numpy's default is ddof = 0 for population standard deviation)
         return features_smoothed_normalized
 
     @staticmethod
@@ -431,9 +631,9 @@ class SleepSEEG:
             for cluster_idx in tqdm(clusters, "Computing probabilities for cluster"):
                 ik = channel_groups == cluster_idx
                 if np.any(ik):
-                    fe = feat[ik, :, :].reshape(np.count_nonzero(ik) * n_epochs, n_features)
-                    del_rows = np.all(np.isnan(fe), axis=1)  # Rows with all NaNs
+                    fe = feat[ik, :, :].reshape(np.count_nonzero(ik) * n_epochs, n_features, order='F')
 
+                    del_rows = np.all(np.isnan(fe), axis=1)  # Rows with all NaNs
                     prob = np.full((fe.shape[0], 7), np.nan)  # Initialize probabilities
 
                     # Predict using each model
@@ -443,8 +643,12 @@ class SleepSEEG:
                     prob[~del_rows, 6] = models[cluster_idx][3].predict_proba_deepseek(fe[~del_rows])[:, 0]
 
                     # Reshape and assign to postprob
-                    postprob[ik] = prob.reshape(-1, n_epochs, 7)
-                return postprob
+                    # Reshape probabilities into (nnz(ik), n_epochs, 7)
+                    prob_reshaped = prob.reshape(np.count_nonzero(ik), n_epochs, 7, order='F')
+
+                    # Assign to postprob
+                    postprob[np.where(ik)[0], :, :] = prob_reshaped
+            return postprob
 
         def _define_stage(confidence):
             # Define stage for each epoch
