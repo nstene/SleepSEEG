@@ -34,6 +34,7 @@ class TestSleepSEEG(unittest.TestCase):
     channel_groups_file = r'matlab_files/channel_groups.mat'
     sa_all_file = r'matlab_files/sa.mat'
     mm_all_file = r'matlab_files/mm.mat'
+    postprob_all_file = r'matlab_files/postprob.mat'
 
     parameters_directory = r'model_parameters'
     model_filename = r'Model_BEA_full.mat'
@@ -86,6 +87,8 @@ class TestSleepSEEG(unittest.TestCase):
         with h5py.File(cls.mm_all_file, 'r') as file:
             mm_matlab = list(file['mm'])
         cls.mm_matlab = np.array(mm_matlab)
+        with h5py.File(cls.postprob_all_file, 'r') as file:
+            cls.postprob_matlab = np.array(list(file['postprob']))
         cls.sleepseeg_3min = SleepSEEG(filepath=cls.data_file_3min)
         cls.sleepseeg = SleepSEEG(filepath=cls.full_data_file)
 
@@ -133,6 +136,21 @@ class TestSleepSEEG(unittest.TestCase):
         )
 
         self.assertTrue(np.all(np.equal(channel_groups_python, self.channel_groups_matlab - 1)))
+
+    def test_compute_probabilities(self):
+        postprob_python = self.sleepseeg_3min._score_channels(models=self.matlab_model_import.models,
+                                            features=self.features_processed_matlab,
+                                                              channel_groups=self.channel_groups_matlab[0] - 1)
+        postprob_matlab = np.transpose(self.postprob_matlab, (2, 1, 0))
+
+        # Find the absolute difference between the arrays
+        diff = np.abs(postprob_python - postprob_matlab)
+
+        # Find the indices where the difference exceeds the tolerance
+        mismatch_indices = np.where(diff > 0.01 * np.abs(postprob_matlab) + 1e-8)
+        mismatch_indices_reshaped = list(zip(*mismatch_indices))
+
+        self.assertTrue(np.allclose(postprob_python, postprob_matlab, rtol=0.5, atol=1e-8))
 
     def test_score_channels(self):
         # features shape (features x channels x epochs)

@@ -588,6 +588,13 @@ class SleepSEEG:
         return preprocessed_features, nightly_features
 
     def cluster_channels(self, nightly_features: np.ndarray, gc):
+        """
+        This is a function that does this and that. BLoup.
+
+        :param nightly_features:
+        :param gc:
+        :return:
+        """
         Nch = nightly_features.shape[1]
         channel_groups = np.zeros(Nch, dtype=int)
         Ng = gc.shape[0]
@@ -598,6 +605,31 @@ class SleepSEEG:
             channel_groups[nc] = np.argmin(distances)  # Find index of minimum distance
 
         return channel_groups
+
+    def _score_channels(self, models, features, channel_groups):
+        n_features, n_channels, n_epochs = features.shape
+        n_stages = 7
+        feat = np.transpose(features, (1, 2, 0))
+        postprob = np.zeros(shape=(n_channels, n_epochs, n_stages))
+        clusters = np.unique(channel_groups).astype(int)
+        self.logger.info(msg=f"{len(clusters)} clusters found.")
+        for cluster_idx in tqdm(clusters, "Computing probabilities for cluster"):
+            ik = channel_groups == cluster_idx
+            if np.any(ik):
+                fe = feat[ik, :, :].reshape(np.count_nonzero(ik) * n_epochs, n_features, order='F')
+
+                del_rows = np.all(np.isnan(fe), axis=1)
+                prob = np.full((fe.shape[0], 7), np.nan)
+
+                # Predict using each model
+                prob[~del_rows, :4] = models[cluster_idx][0].predict_proba_deepseek(fe[~del_rows])
+                prob[~del_rows, 4] = models[cluster_idx][1].predict_proba_deepseek(fe[~del_rows])[:, 0]
+                prob[~del_rows, 5] = models[cluster_idx][2].predict_proba_deepseek(fe[~del_rows])[:, 0]
+                prob[~del_rows, 6] = models[cluster_idx][3].predict_proba_deepseek(fe[~del_rows])[:, 0]
+
+                prob_reshaped = prob.reshape(np.count_nonzero(ik), n_epochs, 7, order='F')
+                postprob[np.where(ik)[0], :, :] = prob_reshaped
+        return postprob
 
     def score_epochs(self, features, models: t.List[t.List[ClassificationTree]], channel_groups):
         """
@@ -616,39 +648,9 @@ class SleepSEEG:
             """
             Computes the final confidence matrix by averaging across channels and normalizing.
             """
-            prop = np.nanmean(prob, axis=0)  # Average over channels
-            prop[:, :4] /= np.sum(prop[:, :4], axis=1, keepdims=True)  # Normalize first 4 columns
-            confidence = prop
+            confidence = np.nanmean(prob, axis=0)  # Average over channels
+            confidence[:, :4] /= np.sum(confidence[:, :4], axis=1, keepdims=True)  # Normalize first 4 columns
             return confidence
-
-        def _score_channels(models, features, logger):
-            n_features, n_channels, n_epochs = features.shape
-            n_stages = 7
-            feat = np.transpose(features, (1, 2, 0))
-            postprob = np.zeros(shape=(n_channels, n_epochs, n_stages))
-            clusters = np.unique(channel_groups).astype(int)
-            logger.info(msg=f"{len(clusters)} clusters found.")
-            for cluster_idx in tqdm(clusters, "Computing probabilities for cluster"):
-                ik = channel_groups == cluster_idx
-                if np.any(ik):
-                    fe = feat[ik, :, :].reshape(np.count_nonzero(ik) * n_epochs, n_features, order='F')
-
-                    del_rows = np.all(np.isnan(fe), axis=1)  # Rows with all NaNs
-                    prob = np.full((fe.shape[0], 7), np.nan)  # Initialize probabilities
-
-                    # Predict using each model
-                    prob[~del_rows, :4] = models[cluster_idx][0].predict_proba_deepseek(fe[~del_rows])
-                    prob[~del_rows, 4] = models[cluster_idx][1].predict_proba_deepseek(fe[~del_rows])[:, 0]
-                    prob[~del_rows, 5] = models[cluster_idx][2].predict_proba_deepseek(fe[~del_rows])[:, 0]
-                    prob[~del_rows, 6] = models[cluster_idx][3].predict_proba_deepseek(fe[~del_rows])[:, 0]
-
-                    # Reshape and assign to postprob
-                    # Reshape probabilities into (nnz(ik), n_epochs, 7)
-                    prob_reshaped = prob.reshape(np.count_nonzero(ik), n_epochs, 7, order='F')
-
-                    # Assign to postprob
-                    postprob[np.where(ik)[0], :, :] = prob_reshaped
-            return postprob
 
         def _define_stage(confidence):
             # Define stage for each epoch
@@ -668,7 +670,7 @@ class SleepSEEG:
 
             return sa, mm
 
-        postprob = _score_channels(models=models, features=features, logger=self.logger)
+        postprob = self._score_channels(models=models, features=features, channel_groups=channel_groups)
         confidence = _compute_confidence(prob=postprob)
         sa, mm = _define_stage(confidence=confidence)
 

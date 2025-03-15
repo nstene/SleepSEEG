@@ -1,7 +1,7 @@
 import datetime
 
 import mne
-from mne.datasets.sleep_physionet.age import fetch_data
+from pymef.mef_session import MefSession
 import pyedflib
 from matplotlib import pyplot as plt
 
@@ -12,11 +12,7 @@ import tkinter as tk
 import typing as t
 import warnings
 
-from scipy.sparse import vstack
-
-
 # TODO: I want EEG Reader to end up creating epochs
-# TODO: epoch progression percentage bar ?
 
 
 class Channel:
