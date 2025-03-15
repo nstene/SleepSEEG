@@ -3,8 +3,8 @@ import numpy as np
 import h5py
 import os
 
-from models.SleepSEEG import SleepSEEG, Epoch
-from models.eeg_reader import EdfReader
+from models.sleep_seeg import SleepSEEG, Epoch
+from models.layout import EdfReader
 from models.MatlabModelImport import MatlabModelImport
 
 from matplotlib import pyplot as plt
