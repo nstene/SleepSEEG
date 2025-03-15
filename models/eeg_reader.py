@@ -2,6 +2,7 @@ import datetime
 
 import mne
 from pymef.mef_session import MefSession
+from mef_tools.io import MefWriter, MefReader
 import pyedflib
 from matplotlib import pyplot as plt
 
@@ -192,6 +193,12 @@ class EEG:
             data_list.append(bipolar_data[i, :])
             self._chan_idx[ch.name] = i
         self._data = np.vstack(data_list)
+
+
+class MefReader:
+    def __init__(self, filepath: str, password: str = ''):
+        self._ms = MefSession(session_path=filepath, password=password)
+        self._channel_names = []
 
 
 class EdfReader:
@@ -517,35 +524,6 @@ if __name__ == "__main__":
     #start_sample = 0
     stop_sample = window_center + round(window_length_samples / 2 + 30 * edf.sampling_frequency)
 
-    # TODO: Figure out units: pyedflib returns physical signal in microvolts and mne in volts (10-6 ratio between both).
-    # Matlab in microvolts
-
-    eeg_mne, times, chans = edf.extract_data_mne(start_sample=start_sample, end_sample=stop_sample)
-    eeg_pyedflib = edf.extract_data_pyedflib(start_sample=start_sample, stop_sample=stop_sample)
-    #eeg_pyedflib_dig = edf.extract_data_pyedflib(start_sample=start_sample, stop_sample=stop_sample, digital=True)
-    #eeg_raw, chan_labels = edf.extract_data_raw(start_sample=start_sample, end_sample=stop_sample+1)
-
-    scaling_factor = edf.scaling_factor
-    offset = edf.signal_value_offset
-    offset[scaling_factor < 0] = 0
-    scaling_factor[scaling_factor < 0] = 1
-
-    # eeg_pyedflib.make_bipolar_montage()
-
-    plt.plot(eeg_pyedflib._data[0])
-    plt.show()
-
-    # TODO: See why data not same as matlab's
-
-    scaling_factor = edf.scaling_factor
-    offset = edf.signal_value_offset
-    offset[scaling_factor < 0] = 0
-    scaling_factor[scaling_factor < 0] = 1
-
-
-    #selected_channels = montage.select_channels_gui()
-
     # TODO: Extract epochs from file
     # TODO: Careful with channel units: get these from the file info, some are microvolts as expected, some are millivolts
 
-    #print(selected_channels)
