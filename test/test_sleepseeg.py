@@ -218,7 +218,7 @@ class TestEpoch(unittest.TestCase):
     def test_change_sampling_rate(self):
         epoch_data = np.vstack([self.epoch_0_matlab_data, self.epoch_0_matlab_data])
         epoch = Epoch(data=epoch_data, timestamps=None, fs=2048, montage=None)
-        epoch.change_sampling_rate_deepseek()
+        epoch.change_sampling_rate()
 
         self.assertTrue(np.allclose(epoch.data[0, :], self.epoch_0_matlab_data_resampled, rtol=0.01))
 

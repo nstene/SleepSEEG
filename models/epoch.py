@@ -7,10 +7,42 @@ from numba import njit
 from models.layout import EEG, Montage, Channel
 
 
-
-
 class Epoch(EEG):
+    """A class representing an epoch of EEG data.
+
+    An epoch is a segment of EEG data with a fixed duration. This class provides functionality
+    for preprocessing EEG epochs and extracting features.
+
+    Attributes:
+        fs (float): Sampling frequency of the EEG data.
+        features (np.ndarray): Computed features for the epoch.
+        start_time (float): Start time of the epoch in seconds.
+        start_sample (int): Start sample index of the epoch in the original data.
+        _data (np.ndarray): The EEG data for the epoch (channels x samples).
+        montage (Montage): The montage describing the channel layout.
+        timestamps (np.ndarray): Timestamps for each sample in the epoch.
+
+    Methods:
+        trim(n_samples_from_start, n_samples_to_end): Trims the epoch by removing samples
+            from the start and end.
+        change_sampling_rate(): Resamples the epoch to a target sampling rate (256 Hz).
+        change_sampling_rate_2(): Resamples the epoch using predefined resampling factors.
+        change_sampling_rate_deepseek(): Resamples the epoch using custom FIR filters.
+        mean_normalize(): Normalizes the epoch data by subtracting the mean.
+        compute_features(): Computes features for the epoch using wavelet decomposition.
+        process_epoch(): Processes the epoch by applying montage, resampling, trimming,
+            and normalization.
+        drop_channels(channels_to_exclude): Removes specified channels from the epoch.
+    """
+
     def __init__(self, data, fs, timestamps=None, montage: Montage = None):
+        """Initializes the Epoch instance.
+
+        :param data: The EEG data for the epoch (channels x samples).
+        :param fs: Sampling frequency of the EEG data.
+        :param timestamps: Timestamps for each sample in the epoch.
+        :param montage: The montage describing the channel layout.
+        """
         super().__init__(data=data, timestamps=timestamps, montage=montage)
         self.fs = fs
         self.features = None
@@ -18,6 +50,11 @@ class Epoch(EEG):
         self.start_sample = None
 
     def trim(self, n_samples_from_start: int, n_samples_to_end: int):
+        """Trims the epoch by removing samples from the start and end.
+
+        :param n_samples_from_start: Number of samples to remove from the start.
+        :param n_samples_to_end: Number of samples to remove from the end.
+        """
         if len(self._data.shape) > 1:
             trimmed_data = self._data[:, n_samples_from_start:-n_samples_to_end]
         else:
@@ -27,71 +64,24 @@ class Epoch(EEG):
 
     @property
     def data(self):
+        """Returns the EEG data for the epoch.
+
+        :return: The EEG data (channels x samples)
+        """
         return self._data
 
     def set_data(self, data):
+        """Sets the EEG data for the epoch.
+
+        :param data: The EEG data (channels x epochs)
+        """
         self._data = data
         return
 
     def change_sampling_rate(self):
-        """The resulting sample rate is up / down times the original sample rate.
+        """Resamples the epoch to a target sampling rate of 256 Hz.
+        This is the exact same implementation as the MATLAB version.
         """
-        target_fs = 256
-        up = target_fs
-        down = self.fs
-        if len(self._data.shape) > 1:
-            axis = 1
-        else:
-            axis = 0
-        self._data = signal.resample_poly(self._data, up, down, axis=axis)
-        self.fs = target_fs
-        return
-
-    def change_sampling_rate_2(self):
-        resample_factors = {
-            200: (8, 20),  # Equivalent to x2 up, x5 down, x4 up, x5 down
-            256: (1, 1),  # No change
-            500: (32, 125),  # Equivalent to x4 up, x5 down, x4 up, x5 down, x4 up, x5 down
-            512: (1, 2),  # Downsample x2
-            1000: (8, 20),  # Equivalent to x2 up, x5 down, x4 up, x5 down, x4 up, x5 down
-            1024: (1, 4),  # Downsample x2 twice
-            2000: (8, 40),  # Equivalent to x5 down, x4 up, x5 down, x4 up, x5 down
-            2048: (1, 8)  # Downsample x2 three times
-        }
-
-        if round(self.fs) not in resample_factors:
-            raise ValueError(
-                f"Error: Sampling rate {self.fs} not supported. Supported rates: {list(resample_factors.keys())}")
-
-        up, down = resample_factors[round(self.fs)]
-        self._data = self.matlab_resample(self._data, up, down)
-        self.fs = 256
-
-    @staticmethod
-    def matlab_resample(X, up, down):
-        # Design a low-pass FIR filter similar to MATLAB
-        GCD = np.gcd(up, down)
-        up, down = up // GCD, down // GCD  # Reduce fraction
-
-        # MATLAB uses a Kaiser window with β=5 (standard value in MATLAB's resample)
-        num_taps = 10 * max(up, down)  # Filter length (MATLAB default)
-        beta = 5  # Kaiser window beta
-
-        h = firwin(num_taps, 1.0 / max(up, down), window=('kaiser', beta))
-
-        # Upsample by inserting zeros
-        X_up = np.zeros((len(X) * up, *X.shape[1:]))
-        X_up[::up] = X  # Insert zeros in between
-
-        # Apply the FIR filter
-        X_filt = lfilter(h, 1.0, X_up, axis=0)
-
-        # Downsample by selecting every `down`-th sample
-        X_resampled = X_filt[::down]
-
-        return X_resampled
-
-    def change_sampling_rate_deepseek(self):
         # TODO: maker sure method works if data is 1-dimensional
         # Define the filter coefficients
         od5 = 54
@@ -247,6 +237,7 @@ class Epoch(EEG):
         return
 
     def mean_normalize(self):
+        """Normalizes the epoch data by substracting each signal's mean."""
         if len(self.data.shape) < 2:
             normalized_data = self._data - np.mean(self._data)
         else:
@@ -255,6 +246,7 @@ class Epoch(EEG):
         return
 
     def compute_features(self) -> np.ndarray:
+        """Computes the features of each signal."""
         features_list = []
         for i in range(len(self.montage.channels)):
             features_list.append(self._compute_signal_features(data=self.data[i]))
@@ -264,67 +256,11 @@ class Epoch(EEG):
     @staticmethod
     def _compute_signal_features(data: np.ndarray):
         """
-                Computes the features for the given signal chunk on a given channel.
-                We use a bandpass filter, iteratively for each scale from 1 to J.
-                The input signal is truncated to a length that is a multiple of 2^J to ensure it can be properly decomposed into
-                the specific number of scales.
+        Computes the features for a given epoch on a given channel.
 
-                Wavelet decomposition:
-                    - High pass filtering
-                        The high-pass filter is applied to the signal to extract the detail coefficients d, which represent the
-                    high-frequency components of the signal.
-                    - Low pass filtering
-                        The low-pass filter is applied to the signal to extract the approximation coefficients x, which represent
-                        the low-frequency components of the signal
-                    - Downsampling:
-                        After each filtering step, the signal is downsampled by a factor 2, effectively halving the sampling rate
-                        for the next iteration.
-
-                Wavelet Leaders:
-                    - Wavelet leaders calculation:
-                        The function calculates the wavelets leaders, which are the maximum absolute values of the wavelet
-                        coefficients within a certain neighbourhood. This is done to capture the local maxima of the signal's
-                        wavelet coefficients.
-                    - Transient removal:
-                        The function discards the initial and final parts of the wavelet leaders to avoid edge effects (transients).
-
-                Feature extraction:
-                    - Logarithmic moments:
-                        The function computes the logarithmic moments of the wavelet leaders. Specifically, it calculates the
-                        mean u1, variance u2 - u1^2, and skewness u3 - 3u1u2 + 2u1^3 of the logarithm of the wavelet leaders.
-                        https://math.stackexchange.com/questions/2048072/what-is-the-meaning-of-log-moment
-                    - Cumulants:
-                        These moments are stored in a matrix C, which will be used later to compute the final features.
-                    - Weighted fit:
-                        The function computes weigths w for a weighted linear fit of the cumulants across scales.
-                        This is done to emphasize certain scales more than others based on their importance.
-
-                Final feature vector
-                    - Feature vector construction:
-                        The final feature vector f is constructed by combining the weighted cumulants and the wavelet
-                        coefficients. The feature vector includes:
-                            - The weighted cumulants C*w, which are scaled by log2(exp(1)) to convert from natural logarithm to
-                              base-2 logarithm
-                            - The wavelet coefficients mwc, which are normalized and transformed using a logarithm scale.
-                    - Exclusion of certain scales:
-                        The function excludes features corresponding to highest frequency scales (64-128Hz) from the final
-                        feature vector.
-
-                Summary
-                The compute_features function extracts a set of features from an iEEG signal using wavelet decomposition and
-                wavelet leaders. These features capture the signal's frequency content and statistical properties across
-                different scales, which are then used for sleep stage classification. The function is designed to be robust to
-                transient effects and emphasizes certain frequency bands that are likely important for distinguishing between
-                different sleep stages.
-
-                Use numpy and pywt
-
-                :return:
-                """
-        # Compute for one epoch, then loop over all epochs
-        # epoch_duration = 30
-        # total_epoch_duration_samples = ((epoch_duration + self._time_window) * self._edf.sampling_frequency
-        #                         - self._initial_buffer.shape[1])
+        :param data: EEG single channel signal (1 x samples)
+        :return: features for that channel (1 x 24)
+        """
 
         # Scales for wavelet decomposition. Signal is decomposed into 8 different frequency band.
         # widest is 0.5-1Hz (since sampling rate is 256)
@@ -336,11 +272,10 @@ class Epoch(EEG):
             [.22641898, .85394354, 1.02432694, .19576696, -.34265671, -.04560113, .10970265,
              -.0088268, -.01779187, .00471742793])
         high_pass_filter_coeff = low_pass_filter_coeff[::-1] * (-1) ** np.arange(2 * nd)
-        # TODO: Why these values for high-pass?
+        # TODO: Why these values?
 
-        # Ensure signal length is multiple of 2^J. // is the floor division
+        # Ensure signal length is multiple of 2^J
         data = data[:2 ** J * (len(data) // 2 ** J)]
-        flattened_data = data.flatten()
 
         # Initialize arrays before looping over the scales
         laa = np.zeros(int(len(data)/2))
@@ -351,7 +286,7 @@ class Epoch(EEG):
         # Wavelet decomposition and feature extraction
         # Use pywt for wavelet transforms: https://pywavelets.readthedocs.io/en/latest/
         for scale in range(J):
-            # High-pass filetering (detail coefficients)
+            # High-pass filtering (detail coefficients)
             d = signal.lfilter(high_pass_filter_coeff, 1, data)
             lea = d[::2]
 
@@ -403,7 +338,7 @@ class Epoch(EEG):
 
         # Compute final features
         f = np.hstack([
-            np.log2(np.exp(1)) * np.dot(C, w),  # Weighted cumulants
+            np.log2(np.exp(1)) * np.dot(C, w),
             mwc
         ])
 
@@ -418,13 +353,20 @@ class Epoch(EEG):
         return f
 
     def process_epoch(self):
+        """Preprocess an epoch.
+        The epoch data is first re-calculated to make it bipolar if the montage was originally referential.
+        The sampling rate is then changed to a standard 256 Hz.
+        The epoch is trimmed such that it is exactly 30s long.
+        The epoch data is then normalized.
+        """
         self.make_bipolar_montage()
-        self.change_sampling_rate_deepseek()
+        self.change_sampling_rate()
         self.trim(n_samples_from_start=int(0.25 * self.fs), n_samples_to_end=int(0.25 * self.fs))
         self.mean_normalize()
         return
 
     def drop_channels(self, channels_to_exclude: t.List[Channel]):
+        """Excludes from the data the specified channels."""
         excluded_channel_names = [chan_to_exclude.name for chan_to_exclude in channels_to_exclude]
         # Drop channels
         idx_to_drop = [self.chan_idx[name] for name in excluded_channel_names]
