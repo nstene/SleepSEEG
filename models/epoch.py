@@ -85,6 +85,7 @@ class Epoch(EEG):
         return X_resampled
 
     def change_sampling_rate_deepseek(self):
+        # TODO: maker sure method works if data is 1-dimensional
         # Define the filter coefficients
         od5 = 54
         od2 = 26
@@ -239,7 +240,10 @@ class Epoch(EEG):
         return
 
     def mean_normalize(self):
-        normalized_data = self._data - np.tile(np.mean(self._data, axis=1), (self._data.shape[1], 1)).T
+        if len(self.data.shape) < 2:
+            normalized_data = self._data - np.mean(self._data)
+        else:
+            normalized_data = self._data - np.tile(np.mean(self._data, axis=1), (self._data.shape[1], 1)).T
         self._data = normalized_data
         return
 

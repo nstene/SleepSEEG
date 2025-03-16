@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import h5py
 
-from models.layout import EdfReader
+from models.readers.edf_reader import EdfReader
 
 if os.getcwd().split('\\')[-1] == 'test':
     os.chdir("..")  # Go one directory up
