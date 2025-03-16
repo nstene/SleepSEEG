@@ -5,7 +5,7 @@ import os
 
 from models.sleep_seeg import SleepSEEG, Epoch
 from models.layout import EdfReader
-from models.MatlabModelImport import MatlabModelImport
+from models.matlab_adaptator import MatlabModelImport
 
 from matplotlib import pyplot as plt
 

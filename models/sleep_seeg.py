@@ -12,7 +12,7 @@ from models.features import Features
 from models.epoch import Epoch
 from models.layout import Montage
 from models.readers.reader_factory import EEGReaderFactory
-from models.MatlabModelImport import MatlabModelImport, ClassificationTree
+from models.matlab_adaptator import MatlabModelImport, ClassificationTree
 
 
 STAGENAMES = {1: 'R', 2: 'W', 3: 'N1', 4: 'N2', 5: 'N3'}

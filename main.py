@@ -1,4 +1,4 @@
-from models.MatlabModelImport import MatlabModelImport
+from models.matlab_adaptator import MatlabModelImport
 import os
 from models.sleep_seeg import SleepSEEG
 
