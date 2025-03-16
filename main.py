@@ -8,8 +8,12 @@ def main():
     filepath = os.path.join(data_dir, filename)
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
 
+    sleep_eeg_instance._edf.clean_channel_names()
+
+    sleep_eeg_instance.select_channels()
+
     # cProfile.run('sleep_eeg_instance.compute_epoch_features()')
-    features = sleep_eeg_instance.compute_epoch_features()
+    sleep_eeg_instance.extract_epochs_and_compute_features(keep_epoch_data=True)
     features_preprocessed, nightly_features = sleep_eeg_instance.preprocess_features()
 
     parameters_directory = r'model_parameters'

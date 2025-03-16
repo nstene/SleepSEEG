@@ -9,6 +9,53 @@ from ..layout import Channel, Montage
 
 
 class EdfReader:
+    """A class for reading and processing EDF files.
+
+    This class provides functionality to read EDF files, extract metadata, and retrieve EEG data
+    using either the `mne` or `pyedflib` libraries. It also includes methods for cleaning channel
+    names, handling montages, and managing discarded channels.
+
+    Attributes:
+        filepath (str): Path to the EDF file.
+        _raw_data (mne.io.Raw): Raw data object from the `mne` library.
+        _channel_names (list): List of original channel names.
+        channels (list): List of `Channel` objects representing cleaned channel names.
+        _metadata (dict): Metadata extracted from the EDF file, including physical/digital ranges,
+                          start time, and file duration.
+        EPOCH_LENGTH (int): Length of an epoch in seconds (default: 30).
+
+    Properties:
+        channel_names (list): List of cleaned channel names.
+        digital_max (np.ndarray): Maximum digital values for each channel.
+        digital_min (np.ndarray): Minimum digital values for each channel.
+        scaling_factor (np.ndarray): Scaling factor to convert digital values to physical units.
+        signal_value_offset (np.ndarray): Offset to adjust signal baselines.
+        start_datetime (datetime.datetime): Start time of the recording.
+        start_time_sample (int): Sample index corresponding to the start time.
+        start_timenum (float): Start time in MATLAB datenum format.
+        physical_dimensions (dict): Physical units for each channel.
+        physical_max (np.ndarray): Maximum physical values for each channel.
+        physical_min (np.ndarray): Minimum physical values for each channel.
+        n_chans (int): Number of channels in the recording.
+        sampling_frequency (float): Sampling frequency of the recording.
+        original_channel_names (list): Original channel names from the EDF file.
+        file_duration (float): Total duration of the recording in seconds.
+        data_offset (int): Byte offset where the data starts in the EDF file.
+        n_records (int): Number of data records in the file.
+        record_duration (float): Duration of a single record in seconds.
+        samples_per_record (list): Number of samples per record for each channel.
+        n_samples (int): Total number of samples in the recording.
+        n_epochs (int): Total number of epochs in the recording.
+        discarded_channels (list): List of channel indices with inconsistent samples per record.
+
+    Methods:
+        clean_channel_names(): Cleans and standardizes channel names.
+        get_montage(): Returns a montage object for the channels.
+        extract_data_mne(start_sample, end_sample, chan_picks=None): Extracts data using `mne`.
+        extract_data_pyedflib(start_sample, stop_sample, chan_picks=None, digital=False): Extracts data using `pyedflib`.
+        extract_data_raw(start_sample, end_sample): Extracts raw data directly from the EDF file.
+    """
+
     _STELLATE_MIN_SECONDS_1 = 27.75
     _STELLATE_MIN_SECONDS_2 = 57.75
 

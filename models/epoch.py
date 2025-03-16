@@ -1,9 +1,12 @@
-from models.layout import EEG, Montage
-from scipy.ndimage import uniform_filter1d
+import typing as t
 from scipy.signal import firwin, lfilter
 from scipy import signal
 import numpy as np
 from numba import njit
+
+from models.layout import EEG, Montage, Channel
+
+
 
 
 class Epoch(EEG):
@@ -25,6 +28,10 @@ class Epoch(EEG):
     @property
     def data(self):
         return self._data
+
+    def set_data(self, data):
+        self._data = data
+        return
 
     def change_sampling_rate(self):
         """The resulting sample rate is up / down times the original sample rate.
@@ -249,7 +256,7 @@ class Epoch(EEG):
 
     def compute_features(self) -> np.ndarray:
         features_list = []
-        for i in range(len(self._montage.channels)):
+        for i in range(len(self.montage.channels)):
             features_list.append(self._compute_signal_features(data=self.data[i]))
         self.features = np.vstack(features_list)
         return self.features
@@ -409,3 +416,27 @@ class Epoch(EEG):
         f[J + 3:2 * J + 3] = np.log10(f[J + 3:2 * J + 3] / np.sum(f[J + 3:2 * J + 3]))
 
         return f
+
+    def process_epoch(self):
+        self.make_bipolar_montage()
+        self.change_sampling_rate_deepseek()
+        self.trim(n_samples_from_start=int(0.25 * self.fs), n_samples_to_end=int(0.25 * self.fs))
+        self.mean_normalize()
+        return
+
+    def drop_channels(self, channels_to_exclude: t.List[Channel]):
+        excluded_channel_names = [chan_to_exclude.name for chan_to_exclude in channels_to_exclude]
+        # Drop channels
+        idx_to_drop = [self.chan_idx[name] for name in excluded_channel_names]
+        self.set_data(np.delete(self._data, idx_to_drop, axis=0))
+
+        # Update montage
+        self.montage.channels = np.delete(self.montage.channels, idx_to_drop, axis=0).tolist()
+
+        # Update channel indices
+        updated_dict = {name: idx for name, idx in self.chan_idx.items() if name not in excluded_channel_names}
+        sorted_channels = sorted(updated_dict.items(), key=lambda x: x[1])
+        updated_dict = {name: new_idx for new_idx, (name, _) in enumerate(sorted_channels)}
+        self.set_chan_idx(updated_dict)
+
+

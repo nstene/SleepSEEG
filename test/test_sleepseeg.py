@@ -4,7 +4,6 @@ import h5py
 import os
 
 from models.sleep_seeg import SleepSEEG, Epoch
-from models.readers.edf_reader import EdfReader
 from models.features import Features
 from models.matlab_adaptator import MatlabModelImport
 
@@ -85,7 +84,7 @@ class TestSleepSEEG(unittest.TestCase):
 
     def test_compute_features(self):
         # TODO: issue with compute features
-        features = self.sleepseeg.compute_epoch_features()
+        features = self.sleepseeg.extract_epochs_and_compute_features()
         for feat_idx in range(features.shape[0]):
             if not np.allclose(features[feat_idx], self.features_unprocessed_matlab[feat_idx], rtol=0.02):
                 for ch_idx in range(features.shape[1]):

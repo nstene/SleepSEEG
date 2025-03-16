@@ -12,6 +12,8 @@ import tkinter as tk
 import typing as t
 import warnings
 
+from scipy.constants import proton_mass
+
 
 class Channel:
     def __init__(self, original_name=None, name=None, chan_family=None):
@@ -62,23 +64,22 @@ class Montage:
         if montage_type not in MONTAGE_TYPES:
             raise ValueError(f'Invalid montage_type {montage_type}. Please choose between "referential" and "bipolar"')
 
-        self.channel_families = None
         self.channels = channels
         self.montage_type = montage_type
-        self._extract_channel_families()
 
     @property
-    def channel_names(self):
-        return [ch.name for ch in self.channels]
-
-    def _extract_channel_families(self):
+    def channel_families(self):
         channel_families = dict()
         for ch in self.channels:
             if ch.chan_family not in channel_families:
                 channel_families[ch.chan_family] = []
             channel_families[ch.chan_family].append(ch)
 
-        self.channel_families = channel_families
+        return channel_families
+
+    @property
+    def channel_names(self):
+        return [ch.name for ch in self.channels]
 
     def make_bipolar_montage(self):
 
@@ -86,12 +87,14 @@ class Montage:
             warnings.warn("Montage is already bipolar")
             return
 
+        chan_families = self.channel_families.copy()
+
         # Reinitialize the montage properties
         self.montage_type = None
         self.channels = None
 
         bipolar_channels = []
-        for chan_fam, members in self.channel_families.items():
+        for chan_fam, members in chan_families.items():
             # order members by their family index
             members_sorted = sorted(members, key=lambda obj: obj.family_index)
             # if consecutive, make channel pair
@@ -103,62 +106,10 @@ class Montage:
         self.montage_type = 'bipolar'
         self.channels = bipolar_channels
 
-    def select_channels_gui(self):
-        def get_selection(options):
-            """ Creates a simple tkinter window with checkboxes for multiple selection. """
-            selected_options = []
-
-            def submit():
-                # Get selected indices and map to actual values
-                selected_indices = listbox.curselection()
-                selected_items = [options[i] for i in selected_indices]
-                root.selected_options = selected_items
-                root.destroy()
-
-            def select_all():
-                # Select all items in the listbox
-                listbox.select_set(0, tk.END)
-
-            def deselect_all():
-                # Deselect all items
-                listbox.selection_clear(0, tk.END)
-
-            root = tk.Tk()
-            root.title("Select Options")
-
-            # Create a listbox with multiple selection mode
-            listbox = tk.Listbox(root, selectmode=tk.MULTIPLE)
-            for option in options:
-                listbox.insert(tk.END, option)
-            listbox.pack(padx=10, pady=10)
-
-            # Button frame
-            button_frame = tk.Frame(root)
-            button_frame.pack(pady=5)
-
-            # Select All button
-            select_all_button = tk.Button(button_frame, text="Select All", command=select_all)
-            select_all_button.pack(side=tk.LEFT, padx=5)
-
-            # Deselect All button
-            deselect_all_button = tk.Button(button_frame, text="Deselect All", command=deselect_all)
-            deselect_all_button.pack(side=tk.LEFT, padx=5)
-
-            # Submit button
-            btn = tk.Button(root, text="OK", command=submit)
-            btn.pack()
-
-            root.selected_options = []
-            root.mainloop()
-
-            return root.selected_options
-
-        return get_selection(options=self.channel_names)
-
 
 class EEG:
     def __init__(self, data: np.ndarray, montage: Montage = None, timestamps= None):
-        self._montage = montage
+        self.montage = montage
         self._timestamps = timestamps
 
         self._chan_idx = {}
@@ -169,11 +120,21 @@ class EEG:
             for i, ch in enumerate(montage.channels):
                 self._chan_idx[ch.name] = i
 
+    @property
+    def chan_idx(self):
+        return self._chan_idx
+
+    def set_chan_idx(self, chan_idx: t.Dict[str, int]):
+        self._chan_idx = chan_idx
+
     def make_bipolar_montage(self):
-        self._montage.make_bipolar_montage()
+        if self.montage is None:
+            raise AttributeError("Specify a referential montage before creating a bipolar montage.")
+
+        self.montage.make_bipolar_montage()
 
         new_signals_list = []
-        for chan_pair in self._montage.channels:
+        for chan_pair in self.montage.channels:
             chan_1_name = chan_pair.bipolar[0]
             chan_2_name = chan_pair.bipolar[1]
 
@@ -186,7 +147,7 @@ class EEG:
 
         data_list = []
         self._chan_idx = {}
-        for i, ch in enumerate(self._montage.channels):
+        for i, ch in enumerate(self.montage.channels):
             data_list.append(bipolar_data[i, :])
             self._chan_idx[ch.name] = i
         self._data = np.vstack(data_list)

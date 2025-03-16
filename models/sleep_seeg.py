@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+import tkinter as tk
 
 from models.features import Features
 from models.epoch import Epoch
-from models.layout import Montage
+from models.layout import Montage, Channel
 from models.readers.reader_factory import EEGReaderFactory
 from models.matlab_adaptator import MatlabModelImport, ClassificationTree
 
@@ -31,8 +31,19 @@ class SleepSEEG:
         self._initial_buffer = None
         self._time_window = None
         self.sleep_stage = None
+        self.excluded_channels = None
 
-    def _init_logger(self):
+
+    @property
+    def channel_names(self):
+        if not self._edf.channels:
+            self._edf.clean_channel_names()
+
+        channel_names = [chan.name for chan in self._edf.channels]
+        return channel_names
+
+    @staticmethod
+    def _init_logger():
         logger = logging.getLogger('SleepSEEG_logger')
         logger.setLevel(logging.DEBUG)
         console_handler = logging.StreamHandler()
@@ -54,22 +65,28 @@ class SleepSEEG:
         epoch = self.read_epoch(start_sample=epoch_start, end_sample=epoch_end)
         epoch.start_time = self._edf.start_timenum + epoch_index / 28800
         epoch.start_sample = epoch_start
+
+        epoch.drop_channels(self.excluded_channels)
+
         return epoch
 
-    def compute_epoch_features(self) -> Features:
-        self.logger.info("Started epoch extraction and feature computation.")
-        features_list = [self._process_epoch(idx) for idx in tqdm(range(self._edf.n_epochs), "Computing features")]
+    def extract_epochs_and_compute_features(self, keep_epoch_data: bool = False):
+        features_list = []
+        for idx in tqdm(range(self._edf.n_epochs), "Extracting epochs"):
+            # Read epoch
+            epoch = self.get_epoch_by_index(idx)
+
+            # Preprocess epoch
+            epoch.process_epoch()
+
+            # Compute features
+            features_list.append(epoch.compute_features())
+
+            if not keep_epoch_data:
+                epoch.set_data(data=None)
+
         self.features = Features(input_array=np.array(features_list).transpose(2, 1, 0))
         return self.features
-
-    def _process_epoch(self, epoch_index: int):
-        epoch = self.get_epoch_by_index(epoch_index)
-        epoch.make_bipolar_montage()
-        epoch.change_sampling_rate_deepseek()
-        epoch.trim(n_samples_from_start=int(0.25 * epoch.fs), n_samples_to_end=int(0.25 * epoch.fs))
-        epoch.mean_normalize()
-        self.epochs.append(epoch)
-        return epoch.compute_features()
 
     def preprocess_features(self) -> t.Tuple[np.ndarray, np.ndarray]:
         """
@@ -269,6 +286,64 @@ class SleepSEEG:
         self.summary.to_csv(os.path.join(output_folder, filename), index=False)
 
         return self.summary
+
+    def select_channels(self):
+        selected_channels = self._select_channels_gui()
+        excluded_channels_names = set(self.channel_names) - set(selected_channels)
+        self.excluded_channels = [Channel(name=chan_name) for chan_name in excluded_channels_names]
+        return
+
+    def _select_channels_gui(self):
+        def get_selection(options):
+            """ Creates a simple tkinter window with checkboxes for multiple selection. """
+            selected_options = []
+
+            def submit():
+                # Get selected indices and map to actual values
+                selected_indices = listbox.curselection()
+                selected_items = [options[i] for i in selected_indices]
+                root.selected_options = selected_items
+                root.destroy()
+
+            def select_all():
+                # Select all items in the listbox
+                listbox.select_set(0, tk.END)
+
+            def deselect_all():
+                # Deselect all items
+                listbox.selection_clear(0, tk.END)
+
+            root = tk.Tk()
+            root.title("Select Options")
+
+            # Create a listbox with multiple selection mode
+            listbox = tk.Listbox(root, selectmode=tk.MULTIPLE)
+            for option in options:
+                listbox.insert(tk.END, option)
+            listbox.pack(padx=10, pady=10)
+
+            # Button frame
+            button_frame = tk.Frame(root)
+            button_frame.pack(pady=5)
+
+            # Select All button
+            select_all_button = tk.Button(button_frame, text="Select All", command=select_all)
+            select_all_button.pack(side=tk.LEFT, padx=5)
+
+            # Deselect All button
+            deselect_all_button = tk.Button(button_frame, text="Deselect All", command=deselect_all)
+            deselect_all_button.pack(side=tk.LEFT, padx=5)
+
+            # Submit button
+            btn = tk.Button(root, text="OK", command=submit)
+            btn.pack()
+
+            root.selected_options = []
+            root.mainloop()
+
+            return root.selected_options
+
+        return get_selection(options=self.channel_names)
 
 
 
