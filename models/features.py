@@ -40,8 +40,7 @@ class Features(np.ndarray):
 
 
     def smooth_features(self):
-        """Smooth features.
-        """
+        """Smooth features."""
         window_size = 3
         nf = self.shape[0]
         nch = self.shape[1]
@@ -55,8 +54,7 @@ class Features(np.ndarray):
                 filtered_feature = pd.Series(feat_copy).rolling(window=window_size, min_periods=1,
                                                                 center=True).mean().to_numpy()
                 feat[~idx_nan] = filtered_feature
-                self[feat_idx, chan_idx, :] = (feat - np.nanmean(feat)) / (np.nanstd(feat,
-                                                                                                             ddof=1))  # ddof =1 to match matlab's sample standard deviation (numpy's default is ddof = 0 for population standard deviation)
+                self[feat_idx, chan_idx, :] = (feat - np.nanmean(feat)) / (np.nanstd(feat, ddof=1))  # ddof =1 to match matlab's sample standard deviation (numpy's default is ddof = 0 for population standard deviation)
         return self
 
 

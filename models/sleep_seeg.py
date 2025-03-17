@@ -74,10 +74,11 @@ class SleepSEEG:
 
         return epoch
 
-    def extract_epochs_and_compute_features(self, keep_epoch_data: bool = False):
+    def extract_epochs_and_compute_features(self, epoch_indices: t.List[int]=None, keep_epoch_data: bool = False):
+        epochs_to_extract = epoch_indices if epoch_indices else range(self._edf.n_epochs)
         features_list = []
         epochs_list = []
-        for idx in tqdm(range(self._edf.n_epochs), "Extracting epochs"):
+        for idx in tqdm(epochs_to_extract, "Extracting epochs"):
             # Read epoch
             epoch = self.get_epoch_by_index(idx)
 
@@ -101,6 +102,9 @@ class SleepSEEG:
         :param features:
         :return:
         """
+
+        if self.features.shape[2] < 2:
+            return self.features, np.squeeze(self.features)
 
         # Outlier detection: remove outliers comparing the same feature on same channel comparing across epoch axis
         self.features.remove_outliers()
@@ -231,7 +235,7 @@ class SleepSEEG:
         file_indentifiers = np.ones(shape=len(self.epochs))
         epoch_start_times_strings = [epoch.start_time.strftime('%Y-%m-%d %H:%M:%S') for epoch in self.epochs]
         stages = [epoch.stage for epoch in self.epochs]
-        max_confidences = [epoch.max_confidence for epoch in self.epochs]
+        max_confidences = [round(epoch.max_confidence, 4) for epoch in self.epochs]
         epoch_start_samples = [epoch.matlab_start_sample for epoch in self.epochs]
 
         self.sleep_stages = pd.DataFrame({

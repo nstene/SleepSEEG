@@ -1,8 +1,10 @@
-from models.matlab_adaptator import MatlabModelImport
 import os
+import typing as t
+
+from models.matlab_adaptator import MatlabModelImport
 from models.sleep_seeg import SleepSEEG
 
-def main(filename):
+def main(filename, epoch_indices: t.List[int]=None):
     data_dir = 'eeg_data'
     filepath = os.path.join(data_dir, filename)
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
@@ -12,7 +14,7 @@ def main(filename):
     sleep_eeg_instance.select_channels()
 
     # cProfile.run('sleep_eeg_instance.compute_epoch_features()')
-    sleep_eeg_instance.extract_epochs_and_compute_features(keep_epoch_data=True)
+    sleep_eeg_instance.extract_epochs_and_compute_features(epoch_indices=epoch_indices, keep_epoch_data=True)
     features_preprocessed, nightly_features = sleep_eeg_instance.preprocess_features()
 
     parameters_directory = r'model_parameters'
@@ -30,8 +32,9 @@ def main(filename):
                                              channel_groups=channel_groups)
 
     output_folder = r'results'
-    sleepstage_filename = 'SleepStage_' + filename.split('.')[0] + '_refactored.csv'
-    summary_filename = 'Summary_' + filename.split('.')[0] + '_refactored.csv'
+    epoch_ext = str(epoch_indices) if epoch_indices else ''
+    sleepstage_filename = 'SleepStage_' + filename.split('.')[0] + epoch_ext + '.csv'
+    summary_filename = 'Summary_' + filename.split('.')[0] + epoch_ext + '.csv'
 
     sleep_stage = sleep_eeg_instance.export_sleep_stage_output(output_folder, filename=sleepstage_filename)
     summary = sleep_eeg_instance.export_summary_output(output_folder, filename=summary_filename)
@@ -39,4 +42,4 @@ def main(filename):
     return
 
 if __name__ == '__main__':
-    main(filename='auditory_stimulation_P18_002_3min.edf')
+    main(filename='auditory_stimulation_P18_002.edf', epoch_indices=None)
