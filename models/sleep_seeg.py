@@ -16,9 +16,13 @@ from models.matlab_adaptator import MatlabModelImport, ClassificationTree
 
 
 STAGENAMES = {1: 'R', 2: 'W', 3: 'N1', 4: 'N2', 5: 'N3'}
+SECONDS_IN_DAY = 86400
 
 
 class SleepSEEG:
+
+    _EPOCH_EXTRACTION_ROLLING_WINDOW = 30
+
     def __init__(self, filepath: str):
         self.logger = self._init_logger()
         self._filepath = filepath
@@ -56,15 +60,15 @@ class SleepSEEG:
     def get_epoch_by_index(self, epoch_index: int):
         rolling_window_seconds = 2.5
         epoch_zero_start = int(self._edf.start_time_sample - rolling_window_seconds / 2 * self._edf.sampling_frequency)
-        # epoch_zero_start = int(self._edf.start_time_sample)
 
         epoch_start = int(epoch_zero_start + epoch_index * 30 * self._edf.sampling_frequency)
         epoch_end = (epoch_zero_start + (epoch_index + 1) * 30 * self._edf.sampling_frequency
                      + rolling_window_seconds * self._edf.sampling_frequency)
 
         epoch = self.read_epoch(start_sample=epoch_start, end_sample=epoch_end)
-        epoch.start_time = self._edf.start_timenum + epoch_index / 28800
+        epoch.start_time = self._edf.start_datetime + timedelta(0, epoch_index * 30)
         epoch.start_sample = epoch_start
+        epoch.matlab_start_sample = int(self._edf.start_time_sample + epoch_index * 30 * self._edf.sampling_frequency)
 
         epoch.drop_channels(self.excluded_channels)
 
@@ -72,6 +76,7 @@ class SleepSEEG:
 
     def extract_epochs_and_compute_features(self, keep_epoch_data: bool = False):
         features_list = []
+        epochs_list = []
         for idx in tqdm(range(self._edf.n_epochs), "Extracting epochs"):
             # Read epoch
             epoch = self.get_epoch_by_index(idx)
@@ -84,8 +89,10 @@ class SleepSEEG:
 
             if not keep_epoch_data:
                 epoch.set_data(data=None)
+            epochs_list.append(epoch)
 
         self.features = Features(input_array=np.array(features_list).transpose(2, 1, 0))
+        self.epochs = epochs_list
         return self.features
 
     def preprocess_features(self) -> t.Tuple[np.ndarray, np.ndarray]:
@@ -222,14 +229,14 @@ class SleepSEEG:
         self.epochs.sort(key=lambda x:x.start_time)
 
         file_indentifiers = np.ones(shape=len(self.epochs))
-        epoch_start_times = [epoch.start_time for epoch in self.epochs]
+        epoch_start_times_strings = [epoch.start_time.strftime('%Y-%m-%d %H:%M:%S') for epoch in self.epochs]
         stages = [epoch.stage for epoch in self.epochs]
         max_confidences = [epoch.max_confidence for epoch in self.epochs]
-        epoch_start_samples = [epoch.start_sample for epoch in self.epochs]
+        epoch_start_samples = [epoch.matlab_start_sample for epoch in self.epochs]
 
         self.sleep_stages = pd.DataFrame({
             'FileIdentifier': file_indentifiers,
-            'EpochStartTime': epoch_start_times,
+            'EpochStartTime': epoch_start_times_strings,
             'SleepStage': stages,
             'MaximumConfidence': max_confidences,
             'EpochStartSample': epoch_start_samples
@@ -271,7 +278,9 @@ class SleepSEEG:
             sleep_stage_list.append(STAGENAMES[Sl.loc[i, 'SleepStage']])
             n_epochs_list.append(icc[i])
 
-            dt = _matlab_datenum_to_datetime(Sl.loc[i, 'EpochStartTime'])
+            # dt = _matlab_datenum_to_datetime(Sl.loc[i, 'EpochStartTime'])
+            dt_str = Sl.loc[i, 'EpochStartTime']
+            dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
             date_list.append(dt.strftime('%Y-%m-%d'))
             time_list.append(dt.strftime('%H:%M:%S'))
 
@@ -348,26 +357,4 @@ class SleepSEEG:
 
 
 if __name__ == "__main__":
-    filepath = r'../eeg_data/auditory_stimulation_P18_002_3min.edf'
-    sleep_eeg_instance = SleepSEEG(filepath=filepath)
-
-    #cProfile.run('sleep_eeg_instance.compute_epoch_features()')
-    features = sleep_eeg_instance.compute_epoch_features()
-    features_preprocessed, nightly_features = sleep_eeg_instance.preprocess_features(features=features)
-
-    parameters_directory = r'../model_parameters'
-    model_filename = r'Model_BEA_full.mat'
-    model_filepath = os.path.join(parameters_directory, model_filename)
-
-    gc_filename = r'GC_BEA.mat'
-    gc_filepath = os.path.join(parameters_directory, gc_filename)
-    matlab_model_import = MatlabModelImport(model_filepath=model_filepath, gc_filepath=gc_filepath)
-
-    channel_groups = sleep_eeg_instance.cluster_channels(nightly_features=nightly_features,
-                                                         gc=matlab_model_import.GC)
-    sa, mm = sleep_eeg_instance.score_epochs(features=features_preprocessed,
-                                              models=matlab_model_import.models,
-                                              channel_groups=channel_groups)
-
-    sleep_stage = sleep_eeg_instance.export_sleep_stage_output(output_folder=r'../results', filename='SleepStage_3min.csv')
-    summary = sleep_eeg_instance.export_summary_output(output_folder=r'../results', filename='Summary_3min.csv')
+    pass

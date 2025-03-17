@@ -140,8 +140,8 @@ class EdfReader:
 
     @property
     def start_timenum(self):
-        datenum = self._metadata['start_time'].timestamp() / self._SECONDS_IN_DAY + self._MATLAB_DATENUM_OFFSET
-        return datenum
+        # datenum = self._metadata['start_time'].timestamp() / self._SECONDS_IN_DAY + self._MATLAB_DATENUM_OFFSET
+        return self._metadata['start_time'].timestamp() / self._SECONDS_IN_DAY
 
     @property
     def physical_dimensions(self):

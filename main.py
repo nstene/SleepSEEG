@@ -2,8 +2,7 @@ from models.matlab_adaptator import MatlabModelImport
 import os
 from models.sleep_seeg import SleepSEEG
 
-def main():
-    filename = 'auditory_stimulation_P18_002.edf'
+def main(filename):
     data_dir = 'eeg_data'
     filepath = os.path.join(data_dir, filename)
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
@@ -40,4 +39,4 @@ def main():
     return
 
 if __name__ == '__main__':
-    main()
+    main(filename='auditory_stimulation_P18_002_3min.edf')

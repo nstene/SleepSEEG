@@ -47,7 +47,9 @@ class Epoch(EEG):
         self.fs = fs
         self.features = None
         self.start_time = None
+        self.matlab_start_time = None
         self.start_sample = None
+        self.matlab_start_sample = None
 
     def trim(self, n_samples_from_start: int, n_samples_to_end: int):
         """Trims the epoch by removing samples from the start and end.
@@ -61,6 +63,11 @@ class Epoch(EEG):
             trimmed_data = self._data[n_samples_from_start:-n_samples_to_end]
         self._data = trimmed_data
         return
+
+    @property
+    def epoch_duration(self):
+        """Returns the epoch duration in seconds."""
+        return self.data.shape[1] / self.fs
 
     @property
     def data(self):
