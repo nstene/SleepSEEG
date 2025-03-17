@@ -3,8 +3,8 @@ import abc
 class BaseEEGLoader(abc.ABC):
     """Abstract base class for EEG readers."""
 
-    def __init__(self, file_path: str):
-        self.file_path = file_path
+    def __init__(self, filepath: str):
+        self.filepath = filepath
         self.raw = None
 
     @abc.abstractmethod
