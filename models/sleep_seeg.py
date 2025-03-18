@@ -390,67 +390,59 @@ class SleepSEEG:
 
     def select_channels(self):
         """Opens a GUI for selecting channels to include in the analysis."""
-        selected_channels = self._select_channels_gui()
+        selected_channels = self.get_channel_selection()
         excluded_channels_names = set(self.channel_names) - set(selected_channels)
         self.excluded_channels = [Channel(name=chan_name) for chan_name in excluded_channels_names]
         return
 
-    def _select_channels_gui(self):
-        """Opens a Tkinter GUI for selecting channels.
+    def get_channel_selection(self):
+        """Creates a simple tkinter window for channel selection."""
+        def submit():
+            # Get selected indices and map to actual values
+            selected_indices = listbox.curselection()
+            selected_items = [options[i] for i in selected_indices]
+            root.selected_options = selected_items
+            root.destroy()
 
-        :return: List of selected channel names.
-        """
-        def get_selection(options):
-            """ Creates a simple tkinter window with checkboxes for multiple selection. """
-            selected_options = []
+        def select_all():
+            # Select all items in the listbox
+            listbox.select_set(0, tk.END)
 
-            def submit():
-                # Get selected indices and map to actual values
-                selected_indices = listbox.curselection()
-                selected_items = [options[i] for i in selected_indices]
-                root.selected_options = selected_items
-                root.destroy()
+        def deselect_all():
+            # Deselect all items
+            listbox.selection_clear(0, tk.END)
 
-            def select_all():
-                # Select all items in the listbox
-                listbox.select_set(0, tk.END)
+        root = tk.Tk()
+        root.title("Select Options")
 
-            def deselect_all():
-                # Deselect all items
-                listbox.selection_clear(0, tk.END)
+        options = self.channel_names
 
-            root = tk.Tk()
-            root.title("Select Options")
+        # Create a listbox with multiple selection mode
+        listbox = tk.Listbox(root, selectmode=tk.MULTIPLE)
+        for option in options:
+            listbox.insert(tk.END, option)
+        listbox.pack(padx=10, pady=10)
 
-            # Create a listbox with multiple selection mode
-            listbox = tk.Listbox(root, selectmode=tk.MULTIPLE)
-            for option in options:
-                listbox.insert(tk.END, option)
-            listbox.pack(padx=10, pady=10)
+        # Button frame
+        button_frame = tk.Frame(root)
+        button_frame.pack(pady=5)
 
-            # Button frame
-            button_frame = tk.Frame(root)
-            button_frame.pack(pady=5)
+        # Select All button
+        select_all_button = tk.Button(button_frame, text="Select All", command=select_all)
+        select_all_button.pack(side=tk.LEFT, padx=5)
 
-            # Select All button
-            select_all_button = tk.Button(button_frame, text="Select All", command=select_all)
-            select_all_button.pack(side=tk.LEFT, padx=5)
+        # Deselect All button
+        deselect_all_button = tk.Button(button_frame, text="Deselect All", command=deselect_all)
+        deselect_all_button.pack(side=tk.LEFT, padx=5)
 
-            # Deselect All button
-            deselect_all_button = tk.Button(button_frame, text="Deselect All", command=deselect_all)
-            deselect_all_button.pack(side=tk.LEFT, padx=5)
+        # Submit button
+        btn = tk.Button(root, text="OK", command=submit)
+        btn.pack()
 
-            # Submit button
-            btn = tk.Button(root, text="OK", command=submit)
-            btn.pack()
+        root.selected_options = []
+        root.mainloop()
 
-            root.selected_options = []
-            root.mainloop()
-
-            return root.selected_options
-
-        return get_selection(options=self.channel_names)
-
+        return root.selected_options
 
 
 if __name__ == "__main__":
