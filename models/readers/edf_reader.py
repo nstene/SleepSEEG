@@ -11,7 +11,7 @@ from models.readers.base_reader import BaseEEGLoader
 
 
 class EdfReader(BaseEEGLoader):
-    """A class for reading and processing EDF files.
+    """A class for reading, processing, and extracting data from EDF files.
 
     This class provides functionality to read EDF files, extract metadata, and retrieve EEG data
     using either the `mne` or `pyedflib` libraries. It also includes methods for cleaning channel
@@ -67,6 +67,11 @@ class EdfReader(BaseEEGLoader):
     EPOCH_LENGTH = 30  # In seconds
 
     def __init__(self, filepath: str):
+        """Initializes the EdfReader object.
+
+        Args:
+            filepath (str): Path to the EDF file to be read.
+        """
         super().__init__(filepath=filepath)
         self._raw_data = mne.io.read_raw_edf(input_fname=filepath, preload=False)
         self._channel_names = []
@@ -134,42 +139,54 @@ class EdfReader(BaseEEGLoader):
 
     @property
     def start_datetime(self) -> datetime.datetime:
+        """Returns the start date and time of the recording."""
         return self._metadata['start_time']
 
     @property
     def start_time_sample(self) -> int:
+        """Returns the sample corresponding to the start time of the recording."""
         return self._metadata['start_time_sample']
 
     @property
     def start_timenum(self) -> float:
+        """Returns the start date and time of the recording as a timestamp."""
         return self._metadata['start_time'].timestamp() / self._SECONDS_IN_DAY
 
     @property
     def physical_dimensions(self) -> t.Dict[str, str]:
+        """Returns the physical dimensions of each channel."""
         return self._raw_data._orig_units
 
     @property
     def physical_max(self) -> np.ndarray[int]:
+        """Returns the maximum possible physical value in units."""
         return self._metadata['physical_max']
 
     @property
     def physical_min(self) -> np.ndarray[int]:
+        """Returns the minimum possible physical value in units."""
         return self._metadata['physical_min']
 
     @property
     def n_chans(self) -> int:
+        """Returns the number of channel in the recording."""
         return self._raw_data.info['nchan']
 
     @property
     def sampling_frequency(self) -> float:
+        """Returns the recording's sampling frequency."""
         return self._raw_data.info['sfreq']
 
     @property
     def original_channel_names(self) -> t.List[str]:
+        """Returns the channel names as they were originally extracted from the recording."""
         return self._raw_data.info['ch_names']
 
     @property
     def file_duration(self) -> float:
+        """Returns the recording duration in seconds.
+        Should be equal to record_duration * n_records.
+        Should also be euqal to n_samples / sampling_frequency."""
         return self._raw_data.duration
 
     @property
@@ -179,22 +196,27 @@ class EdfReader(BaseEEGLoader):
 
     @property
     def n_records(self) -> int:
+        """Retuns the numbert of records in the recording."""
         return self._raw_data._raw_extras[0]['n_records']
 
     @property
     def record_duration(self) -> float:
+        """Returns the record duration in seconds."""
         return self._raw_data._raw_extras[0]['record_length'][0]
 
     @property
     def samples_per_record(self) -> np.ndarray[int]:
+        """Returns the number of samples per record for each channel."""
         return self._raw_data._raw_extras[0]['n_samps']
 
     @property
     def n_samples(self) -> int:
+        """Returns the total number of samples in the recording."""
         return self._raw_data.n_times
 
     @property
     def n_epochs(self) -> int:
+        """Returns the number of 30s epochs that can be extracted from the recording."""
         n_epochs = (self.n_samples - self.start_time_sample) / self.sampling_frequency / self.EPOCH_LENGTH
 
         # TODO: If n_epochs has decimals smaller than 0.042, we effectively go to the number of epochs lower integer, why?
@@ -204,6 +226,17 @@ class EdfReader(BaseEEGLoader):
         return np.floor(n_epochs).astype(int)
 
     def clean_channel_names(self) -> None:
+        """Standardizes the original channel names.
+
+        Ex:
+        self.original_channel_name = 'EEG LTP1     '
+
+        will result in
+
+        self.chan_family = 'LTP'
+        self.name = 'LTP1'
+        self.family_index = 1
+        """
         original_chans = self._raw_data.info['ch_names']
 
         clean_channels = []
@@ -215,6 +248,7 @@ class EdfReader(BaseEEGLoader):
         self.channels = clean_channels
 
     def get_montage(self) -> Montage:
+        """Returns a referential montage instance populated with the channels in the recoring."""
         return Montage(channels=self.channels, montage_type='referential')
 
     def load_data(self, start_sample: int, end_sample: int, chan_picks: list = None) \
@@ -252,7 +286,7 @@ class EdfReader(BaseEEGLoader):
     def extract_data_pyedflib(self, start_sample: int, stop_sample: int, chan_picks: list = None, digital: bool=False) \
             -> t.Tuple[np.ndarray[float | int], t.List[Channel]]:
         """
-        Reads the data between start and stop samples for the specified channels.
+        Reads the data between start and stop samples for the specified channels using Pyedflib.
         Data is automatically scaled to be converted to physical units.
         Pyedflib's method to extract data should also account for where the data actually starts, so we shouldn't need to
         add the data_offset to the start and stop samples.
@@ -265,7 +299,7 @@ class EdfReader(BaseEEGLoader):
         :param chan_picks: List of channel names for which to read the data. Default is None to read all EEG channels.
         :param digital: Boolean, whether to extract the data as digital signal or not. Default is False to return the
          physical signal.
-        :return: Numpy array containing the data. (n_chans x n_samples)
+        :return: tuple( Numpy array containing the data. (n_chans x n_samples), list of channels (n_chans) )
         """
         # TODO: gotta assert that the number of channels is same as the length of samples per record.
         # TODO: not the case as yet
@@ -294,6 +328,14 @@ class EdfReader(BaseEEGLoader):
         return data, channels
 
     def extract_data_raw(self, start_sample: int, end_sample: int) -> t.Tuple[np.ndarray[float], t.List[str]]:
+        """
+        Reads the data between start and stop samples for the specified channels using a custom reader.
+        Data is not scaled to physical units, it is returned as a digital signal.
+
+        :param start_sample: Sample from which to start extracting the data.
+        :param end_sample: Last sample to extract from the data.
+        :return: tuple( Numpy array containing the data. (n_chans x n_samples), list of channels (n_chans) )
+        """
         with open(self.filepath, "rb") as f:
             # Read the fixed 256-byte header
             header = f.read(256).decode('ascii', errors='ignore')
@@ -361,7 +403,7 @@ class EdfReader(BaseEEGLoader):
     def discarded_channels(self) -> np.ndarray[int]|None:
         """Disregard channels that have different number of samples per record than the others.
 
-        :return:
+        :return: Numpy array containing the indices of the channels to exclude, if any, or None.
         """
 
         # TODO: What to do when samples per record is bigger than the number of channels, like in the case of a channel of annotations?
