@@ -18,7 +18,7 @@ class Features(np.ndarray):
         smooth_features(): Applies smoothing to the feature data.
         get_nightly_features(): Aggregates features over a nightly period.
     """
-    def __new__(cls, input_array: np.ndarray[float], *args, **kwargs):
+    def __new__(cls, input_array: np.ndarray, *args, **kwargs):
         """Creates a new instance of the Features class.
 
         Args:

@@ -227,6 +227,7 @@ class EdfReader(BaseEEGLoader):
 
     def clean_channel_names(self) -> None:
         """Standardizes the original channel names.
+        Standardized channel names are assigned to the channels attribute
 
         Ex:
         self.original_channel_name = 'EEG LTP1     '

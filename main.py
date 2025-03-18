@@ -42,4 +42,4 @@ def main(filename, epoch_indices: t.List[int]=None):
     return
 
 if __name__ == '__main__':
-    main(filename='auditory_stimulation_P18_002.edf', epoch_indices=None)
+    main(filename='auditory_stimulation_P18_002_3min.edf', epoch_indices=None)
