@@ -1,207 +1,63 @@
 import datetime
+import typing as t
 
 import mne
-from pymef.mef_session import MefSession
-from mef_tools.io import MefWriter, MefReader
 import pyedflib
-from matplotlib import pyplot as plt
-
 import numpy as np
 import statistics
-import tkinter as tk
 
-import typing as t
-import warnings
-
-# TODO: I want EEG Reader to end up creating epochs
+from ..layout import Channel, Montage
+from models.readers.base_reader import BaseEEGLoader
 
 
-class Channel:
-    def __init__(self, original_name=None, name=None, chan_family=None):
-        self.original_name = original_name
-        self.family_index = None
-        self.chan_family = chan_family
-        self.name = name
+class EdfReader(BaseEEGLoader):
+    """A class for reading, processing, and extracting data from EDF files.
 
-    @property
-    def bipolar(self):
-        splitted_name = self.name.split('-')
-        bipolar_chan = []
-        if len(splitted_name) == 2:
-            bipolar_chan.append(splitted_name[0])
-            bipolar_chan.append(splitted_name[1])
-        return bipolar_chan
+    This class provides functionality to read EDF files, extract metadata, and retrieve EEG data
+    using either the `mne` or `pyedflib` libraries. It also includes methods for cleaning channel
+    names, handling montages, and managing discarded channels.
 
-    def clean_name(self):
-        chan_stripped = self.original_name.strip()  # Strip trailing whitespaces
-        chan_name = " ".join(chan_stripped.split()[1:])  # Split after first whitespace, getting rid of electrode type
+    Attributes:
+        filepath (str): Path to the EDF file.
+        _raw_data (mne.io.Raw): Raw data object from the `mne` library.
+        _channel_names (list): List of original channel names.
+        channels (list): List of `Channel` objects representing cleaned channel names.
+        _metadata (dict): Metadata extracted from the EDF file, including physical/digital ranges,
+                          start time, and file duration.
+        EPOCH_LENGTH (int): Length of an epoch in seconds (default: 30).
 
-        if chan_name != '':
-            clean_name = chan_name
-        else:
-            clean_name = chan_stripped
+    Properties:
+        channel_names (list): List of cleaned channel names.
+        digital_max (np.ndarray): Maximum digital values for each channel.
+        digital_min (np.ndarray): Minimum digital values for each channel.
+        scaling_factor (np.ndarray): Scaling factor to convert digital values to physical units.
+        signal_value_offset (np.ndarray): Offset to adjust signal baselines.
+        start_datetime (datetime.datetime): Start time of the recording.
+        start_time_sample (int): Sample index corresponding to the start time.
+        start_timenum (float): Start time in MATLAB datenum format.
+        physical_dimensions (dict): Physical units for each channel.
+        physical_max (np.ndarray): Maximum physical values for each channel.
+        physical_min (np.ndarray): Minimum physical values for each channel.
+        n_chans (int): Number of channels in the recording.
+        sampling_frequency (float): Sampling frequency of the recording.
+        original_channel_names (list): Original channel names from the EDF file.
+        file_duration (float): Total duration of the recording in seconds.
+        data_offset (int): Byte offset where the data starts in the EDF file.
+        n_records (int): Number of data records in the file.
+        record_duration (float): Duration of a single record in seconds.
+        samples_per_record (list): Number of samples per record for each channel.
+        n_samples (int): Total number of samples in the recording.
+        n_epochs (int): Total number of epochs in the recording.
+        discarded_channels (list): List of channel indices with inconsistent samples per record.
 
-        if not chan_stripped[-1].isdigit():
-            chan_family = clean_name
-            family_index = np.nan
-        elif not chan_stripped[-2].isdigit():
-            chan_family = clean_name[:-1]
-            family_index = int(clean_name[-1:])
-        else:
-            chan_family = clean_name[:-2]
-            family_index = int(clean_name[-2:])
+    Methods:
+        clean_channel_names(): Cleans and standardizes channel names.
+        get_montage(): Returns a montage object for the channels.
+        extract_data_mne(start_sample, end_sample, chan_picks=None): Extracts data using `mne`.
+        extract_data_pyedflib(start_sample, stop_sample, chan_picks=None, digital=False): Extracts data using `pyedflib`.
+        extract_data_raw(start_sample, end_sample): Extracts raw data directly from the EDF file.
+    """
 
-        self.chan_family = chan_family
-        self.name = clean_name
-        self.family_index = family_index
-
-        return
-
-
-class Montage:
-    def __init__(self, channels: t.List[Channel], montage_type: str):
-
-        MONTAGE_TYPES = ['referential', 'bipolar']
-        if montage_type not in MONTAGE_TYPES:
-            raise ValueError(f'Invalid montage_type {montage_type}. Please choose between "referential" and "bipolar"')
-
-        self.channel_families = None
-        self.channels = channels
-        self.montage_type = montage_type
-        self._extract_channel_families()
-
-    @property
-    def channel_names(self):
-        return [ch.name for ch in self.channels]
-
-    def _extract_channel_families(self):
-        channel_families = dict()
-        for ch in self.channels:
-            if ch.chan_family not in channel_families:
-                channel_families[ch.chan_family] = []
-            channel_families[ch.chan_family].append(ch)
-
-        self.channel_families = channel_families
-
-    def make_bipolar_montage(self):
-
-        if self.montage_type == 'bipolar':
-            warnings.warn("Montage is already bipolar")
-            return
-
-        # Reinitialize the montage properties
-        self.montage_type = None
-        self.channels = None
-
-        bipolar_channels = []
-        for chan_fam, members in self.channel_families.items():
-            # order members by their family index
-            members_sorted = sorted(members, key=lambda obj: obj.family_index)
-            # if consecutive, make channel pair
-            for i in range(len(members_sorted) - 1):
-                if members_sorted[i].family_index == members_sorted[i + 1].family_index - 1:
-                    new_bipolar_chan_name = members_sorted[i].name + '-' + members_sorted[i + 1].name
-                    bipolar_channels.append(Channel(name=new_bipolar_chan_name, chan_family=chan_fam))
-
-        self.montage_type = 'bipolar'
-        self.channels = bipolar_channels
-
-    def select_channels_gui(self):
-        def get_selection(options):
-            """ Creates a simple tkinter window with checkboxes for multiple selection. """
-            selected_options = []
-
-            def submit():
-                # Get selected indices and map to actual values
-                selected_indices = listbox.curselection()
-                selected_items = [options[i] for i in selected_indices]
-                root.selected_options = selected_items
-                root.destroy()
-
-            def select_all():
-                # Select all items in the listbox
-                listbox.select_set(0, tk.END)
-
-            def deselect_all():
-                # Deselect all items
-                listbox.selection_clear(0, tk.END)
-
-            root = tk.Tk()
-            root.title("Select Options")
-
-            # Create a listbox with multiple selection mode
-            listbox = tk.Listbox(root, selectmode=tk.MULTIPLE)
-            for option in options:
-                listbox.insert(tk.END, option)
-            listbox.pack(padx=10, pady=10)
-
-            # Button frame
-            button_frame = tk.Frame(root)
-            button_frame.pack(pady=5)
-
-            # Select All button
-            select_all_button = tk.Button(button_frame, text="Select All", command=select_all)
-            select_all_button.pack(side=tk.LEFT, padx=5)
-
-            # Deselect All button
-            deselect_all_button = tk.Button(button_frame, text="Deselect All", command=deselect_all)
-            deselect_all_button.pack(side=tk.LEFT, padx=5)
-
-            # Submit button
-            btn = tk.Button(root, text="OK", command=submit)
-            btn.pack()
-
-            root.selected_options = []
-            root.mainloop()
-
-            return root.selected_options
-
-        return get_selection(options=self.channel_names)
-
-
-class EEG:
-    def __init__(self, data: np.ndarray, montage: Montage = None, timestamps= None):
-        self._montage = montage
-        self._timestamps = timestamps
-
-        self._chan_idx = {}
-        self._data = data
-
-        if montage:
-            assert data.shape[0] == len(montage.channel_names)
-            for i, ch in enumerate(montage.channels):
-                self._chan_idx[ch.name] = i
-
-    def make_bipolar_montage(self):
-        self._montage.make_bipolar_montage()
-
-        new_signals_list = []
-        for chan_pair in self._montage.channels:
-            chan_1_name = chan_pair.bipolar[0]
-            chan_2_name = chan_pair.bipolar[1]
-
-            chan_1_idx = self._chan_idx[chan_1_name]
-            chan_2_idx = self._chan_idx[chan_2_name]
-
-            new_signals_list.append(self._data[chan_1_idx] - self._data[chan_2_idx])
-
-        bipolar_data = np.vstack(new_signals_list)
-
-        data_list = []
-        self._chan_idx = {}
-        for i, ch in enumerate(self._montage.channels):
-            data_list.append(bipolar_data[i, :])
-            self._chan_idx[ch.name] = i
-        self._data = np.vstack(data_list)
-
-
-class MefReader:
-    def __init__(self, filepath: str, password: str = ''):
-        self._ms = MefSession(session_path=filepath, password=password)
-        self._channel_names = []
-
-
-class EdfReader:
     _STELLATE_MIN_SECONDS_1 = 27.75
     _STELLATE_MIN_SECONDS_2 = 57.75
 
@@ -211,10 +67,15 @@ class EdfReader:
     EPOCH_LENGTH = 30  # In seconds
 
     def __init__(self, filepath: str):
+        """Initializes the EdfReader object.
+
+        Args:
+            filepath (str): Path to the EDF file to be read.
+        """
+        super().__init__(filepath=filepath)
         self._raw_data = mne.io.read_raw_edf(input_fname=filepath, preload=False)
         self._channel_names = []
         self.channels = []
-        self.filepath = filepath
 
         self._metadata = self._extract_metadata()
 
@@ -224,11 +85,10 @@ class EdfReader:
     def _extract_metadata(self):
         metadata = dict()
         with pyedflib.EdfReader(self.filepath) as f:
-            # TODO: Why are these values only 37 elements long?
-            metadata['physical_max'] = f.getPhysicalMaximum()
-            metadata['physical_min'] = f.getPhysicalMinimum()
-            metadata['digital_min'] = f.getDigitalMinimum()
-            metadata['digital_max'] = f.getDigitalMaximum()
+            metadata['physical_max'] = f.getPhysicalMaximum().astype(int)
+            metadata['physical_min'] = f.getPhysicalMinimum().astype(int)
+            metadata['digital_min'] = f.getDigitalMinimum().astype(int)
+            metadata['digital_max'] = f.getDigitalMaximum().astype(int)
             metadata['file_duration'] = f.getFileDuration()
             start_time = f.getStartdatetime()
 
@@ -251,70 +111,82 @@ class EdfReader:
         return metadata
 
     @property
-    def channel_names(self):
+    def channel_names(self) -> t.List[str]:
+        """Returns names of the channels present in the recording."""
         return [ch.name for ch in self.channels]
 
     @property
-    def digital_max(self):
+    def digital_max(self) -> np.ndarray[int]:
         """The integer upper bound of the range in which the data is stored, for each channel.
         Typically 32767 for 16-bit resolution."""
         return self._metadata['digital_max']
 
     @property
-    def digital_min(self):
+    def digital_min(self) -> np.ndarray[int]:
         """The integer lower bound of the range in which the data is stored, for each channel.
         Typically -32768 for 16-bit resolution."""
         return self._metadata['digital_min']
 
     @property
-    def scaling_factor(self) -> np.ndarray:
+    def scaling_factor(self) -> np.ndarray[float]:
         """Factor to scale stored digital range to real-world unit range, for each channel."""
         return np.divide((self.physical_max - self.physical_min), (self.digital_max - self.digital_min))
 
     @property
-    def signal_value_offset(self) -> np.ndarray:
+    def signal_value_offset(self) -> np.ndarray[float]:
         """Constant added to shift signal to the correct baseline, for each channel."""
         return self.physical_min - np.multiply(self.digital_min, self.scaling_factor)
 
     @property
-    def start_datetime(self):
+    def start_datetime(self) -> datetime.datetime:
+        """Returns the start date and time of the recording."""
         return self._metadata['start_time']
 
     @property
-    def start_time_sample(self):
+    def start_time_sample(self) -> int:
+        """Returns the sample corresponding to the start time of the recording."""
         return self._metadata['start_time_sample']
 
     @property
-    def start_timenum(self):
-        datenum = self._metadata['start_time'].timestamp() / self._SECONDS_IN_DAY + self._MATLAB_DATENUM_OFFSET
-        return datenum
+    def start_timenum(self) -> float:
+        """Returns the start date and time of the recording as a timestamp."""
+        return self._metadata['start_time'].timestamp() / self._SECONDS_IN_DAY
 
     @property
-    def physical_dimensions(self):
+    def physical_dimensions(self) -> t.Dict[str, str]:
+        """Returns the physical dimensions of each channel."""
         return self._raw_data._orig_units
 
     @property
-    def physical_max(self):
+    def physical_max(self) -> np.ndarray[int]:
+        """Returns the maximum possible physical value in units."""
         return self._metadata['physical_max']
 
     @property
-    def physical_min(self):
+    def physical_min(self) -> np.ndarray[int]:
+        """Returns the minimum possible physical value in units."""
         return self._metadata['physical_min']
 
     @property
-    def n_chans(self):
+    def n_chans(self) -> int:
+        """Returns the number of channel in the recording."""
         return self._raw_data.info['nchan']
 
     @property
-    def sampling_frequency(self):
+    def sampling_frequency(self) -> float:
+        """Returns the recording's sampling frequency."""
         return self._raw_data.info['sfreq']
 
     @property
-    def original_channel_names(self):
+    def original_channel_names(self) -> t.List[str]:
+        """Returns the channel names as they were originally extracted from the recording."""
         return self._raw_data.info['ch_names']
 
     @property
-    def file_duration(self):
+    def file_duration(self) -> float:
+        """Returns the recording duration in seconds.
+        Should be equal to record_duration * n_records.
+        Should also be euqal to n_samples / sampling_frequency."""
         return self._raw_data.duration
 
     @property
@@ -323,23 +195,28 @@ class EdfReader:
         return self._raw_data._raw_extras[0]['data_offset']
 
     @property
-    def n_records(self):
+    def n_records(self) -> int:
+        """Retuns the numbert of records in the recording."""
         return self._raw_data._raw_extras[0]['n_records']
 
     @property
-    def record_duration(self):
+    def record_duration(self) -> float:
+        """Returns the record duration in seconds."""
         return self._raw_data._raw_extras[0]['record_length'][0]
 
     @property
-    def samples_per_record(self):
+    def samples_per_record(self) -> np.ndarray[int]:
+        """Returns the number of samples per record for each channel."""
         return self._raw_data._raw_extras[0]['n_samps']
 
     @property
-    def n_samples(self):
+    def n_samples(self) -> int:
+        """Returns the total number of samples in the recording."""
         return self._raw_data.n_times
 
     @property
-    def n_epochs(self):
+    def n_epochs(self) -> int:
+        """Returns the number of 30s epochs that can be extracted from the recording."""
         n_epochs = (self.n_samples - self.start_time_sample) / self.sampling_frequency / self.EPOCH_LENGTH
 
         # TODO: If n_epochs has decimals smaller than 0.042, we effectively go to the number of epochs lower integer, why?
@@ -348,7 +225,19 @@ class EdfReader:
 
         return np.floor(n_epochs).astype(int)
 
-    def clean_channel_names(self):
+    def clean_channel_names(self) -> None:
+        """Standardizes the original channel names.
+        Standardized channel names are assigned to the channels attribute
+
+        Ex:
+        self.original_channel_name = 'EEG LTP1     '
+
+        will result in
+
+        self.chan_family = 'LTP'
+        self.name = 'LTP1'
+        self.family_index = 1
+        """
         original_chans = self._raw_data.info['ch_names']
 
         clean_channels = []
@@ -359,10 +248,12 @@ class EdfReader:
 
         self.channels = clean_channels
 
-    def get_montage(self):
+    def get_montage(self) -> Montage:
+        """Returns a referential montage instance populated with the channels in the recoring."""
         return Montage(channels=self.channels, montage_type='referential')
 
-    def extract_data_mne(self, start_sample: int, end_sample: int, chan_picks: list = None):
+    def load_data(self, start_sample: int, end_sample: int, chan_picks: list = None) \
+            -> t.Tuple[np.ndarray[float], np.ndarray[float], t.List[Channel]]:
         """
         Reads the data between start and stop samples for the specified channels.
         Data should be automatically scaled to be converted to physical units. Make sure that's the case.
@@ -375,7 +266,7 @@ class EdfReader:
         :param start_sample: Sample from which to start extracting the data.
         :param end_sample: Last sample to extract from the data.
         :param chan_picks: List of channel names for which to read the data. Default is None to read all EEG channels.
-        :return: Numpy array containing the data. (n_chans x n_samples)
+        :return: tuple(Numpy array containing the data. (n_chans x n_samples), times (n_samples), channels (n_chans)
         """
         # TODO: gotta assert that the number of channels is same as the length of samples per record.
         # TODO: not the case as yet
@@ -393,9 +284,10 @@ class EdfReader:
 
         return data*1e6, times, channels
 
-    def extract_data_pyedflib(self, start_sample: int, stop_sample: int, chan_picks: list = None, digital: bool=False):
+    def extract_data_pyedflib(self, start_sample: int, end_sample: int, chan_picks: list = None, digital: bool=False) \
+            -> t.Tuple[np.ndarray[float | int], t.List[Channel]]:
         """
-        Reads the data between start and stop samples for the specified channels.
+        Reads the data between start and stop samples for the specified channels using Pyedflib.
         Data is automatically scaled to be converted to physical units.
         Pyedflib's method to extract data should also account for where the data actually starts, so we shouldn't need to
         add the data_offset to the start and stop samples.
@@ -406,7 +298,9 @@ class EdfReader:
         :param start_sample: Sample from which to start extracting the data.
         :param stop_sample: Last sample to extract from the data.
         :param chan_picks: List of channel names for which to read the data. Default is None to read all EEG channels.
-        :return: Numpy array containing the data. (n_chans x n_samples)
+        :param digital: Boolean, whether to extract the data as digital signal or not. Default is False to return the
+         physical signal.
+        :return: tuple( Numpy array containing the data. (n_chans x n_samples), list of channels (n_chans) )
         """
         # TODO: gotta assert that the number of channels is same as the length of samples per record.
         # TODO: not the case as yet
@@ -423,7 +317,7 @@ class EdfReader:
 
         data_list = []
         for i in range(len(channels)):
-            data_list.append(edf.readSignal(chn=i, start=start_sample, n=(stop_sample-start_sample), digital=digital))
+            data_list.append(edf.readSignal(chn=i, start=start_sample, n=(end_sample-start_sample), digital=digital))
 
         units = edf.getPhysicalDimension(chn=0)
 
@@ -434,7 +328,15 @@ class EdfReader:
 
         return data, channels
 
-    def extract_data_raw(self, start_sample, end_sample):
+    def extract_data_raw(self, start_sample: int, end_sample: int) -> t.Tuple[np.ndarray[float], t.List[str]]:
+        """
+        Reads the data between start and stop samples for the specified channels using a custom reader.
+        Data is not scaled to physical units, it is returned as a digital signal.
+
+        :param start_sample: Sample from which to start extracting the data.
+        :param end_sample: Last sample to extract from the data.
+        :return: tuple( Numpy array containing the data. (n_chans x n_samples), list of channels (n_chans) )
+        """
         with open(self.filepath, "rb") as f:
             # Read the fixed 256-byte header
             header = f.read(256).decode('ascii', errors='ignore')
@@ -499,10 +401,10 @@ class EdfReader:
             return raw_data.T, channel_labels
 
     @property
-    def discarded_channels(self):
-        """ Disregard channels that have different number of samples per record than the others
+    def discarded_channels(self) -> np.ndarray[int]|None:
+        """Disregard channels that have different number of samples per record than the others.
 
-        :return:
+        :return: Numpy array containing the indices of the channels to exclude, if any, or None.
         """
 
         # TODO: What to do when samples per record is bigger than the number of channels, like in the case of a channel of annotations?
@@ -510,20 +412,3 @@ class EdfReader:
         main_mode = statistics.mode(self.samples_per_record)
         discarded_chans = np.where(self.samples_per_record != main_mode)[0]
         return discarded_chans if len(discarded_chans) > 0 else None
-
-
-if __name__ == "__main__":
-    filepath = r'../eeg_data/auditory_stimulation_P18_002.edf'
-    edf = EdfReader(filepath)
-    edf.clean_channel_names()
-
-    window_center = edf.start_time_sample
-    window_length_seconds = 2.5
-    window_length_samples = 2.5 * edf.sampling_frequency
-    start_sample = window_center - round(window_length_samples / 2) + 1
-    #start_sample = 0
-    stop_sample = window_center + round(window_length_samples / 2 + 30 * edf.sampling_frequency)
-
-    # TODO: Extract epochs from file
-    # TODO: Careful with channel units: get these from the file info, some are microvolts as expected, some are millivolts
-
