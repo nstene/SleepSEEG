@@ -284,7 +284,7 @@ class EdfReader(BaseEEGLoader):
 
         return data*1e6, times, channels
 
-    def extract_data_pyedflib(self, start_sample: int, stop_sample: int, chan_picks: list = None, digital: bool=False) \
+    def extract_data_pyedflib(self, start_sample: int, end_sample: int, chan_picks: list = None, digital: bool=False) \
             -> t.Tuple[np.ndarray[float | int], t.List[Channel]]:
         """
         Reads the data between start and stop samples for the specified channels using Pyedflib.
@@ -317,7 +317,7 @@ class EdfReader(BaseEEGLoader):
 
         data_list = []
         for i in range(len(channels)):
-            data_list.append(edf.readSignal(chn=i, start=start_sample, n=(stop_sample-start_sample), digital=digital))
+            data_list.append(edf.readSignal(chn=i, start=start_sample, n=(end_sample-start_sample), digital=digital))
 
         units = edf.getPhysicalDimension(chn=0)
 

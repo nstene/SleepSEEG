@@ -20,7 +20,7 @@ SECONDS_IN_DAY = 60*60*24
 
 
 class SleepSEEG:
-    """A class for processing and automatic scoring of Sleep iEEG recordings.
+    """A class for automatic scoring of Sleep iEEG recordings.
 
     This class provides functionality to read EEG data, extract epochs, compute features,
     and classify sleep stages using machine learning models. It also supports exporting
@@ -60,7 +60,6 @@ class SleepSEEG:
         self._time_window = None
         self.sleep_stage = None
         self.excluded_channels = None
-
 
     @property
     def channel_names(self) -> t.List[str]:
@@ -177,9 +176,11 @@ class SleepSEEG:
         end_sample = int(end_sample)
 
         data, timestamps, channels = self._edf.load_data(start_sample=start_sample, end_sample=end_sample)
+        #data, channels = self._edf.extract_data_pyedflib(start_sample=start_sample, end_sample=end_sample, digital=True)
         montage = Montage(channels=channels, montage_type='referential')
 
         return Epoch(data=data, fs=self._edf.sampling_frequency, timestamps=timestamps, montage=montage)
+        # return Epoch(data=data, fs=self._edf.sampling_frequency, timestamps=None, montage=montage)
 
     @staticmethod
     def cluster_channels(nightly_features: np.ndarray, gc: np.ndarray) -> np.ndarray:
@@ -232,10 +233,10 @@ class SleepSEEG:
                 prob = np.full((fe.shape[0], 7), np.nan)
 
                 # Predict using each model
-                prob[~del_rows, :4] = models[cluster_idx][0].predict_proba_deepseek(fe[~del_rows])
-                prob[~del_rows, 4] = models[cluster_idx][1].predict_proba_deepseek(fe[~del_rows])[:, 0]
-                prob[~del_rows, 5] = models[cluster_idx][2].predict_proba_deepseek(fe[~del_rows])[:, 0]
-                prob[~del_rows, 6] = models[cluster_idx][3].predict_proba_deepseek(fe[~del_rows])[:, 0]
+                prob[~del_rows, :4] = models[cluster_idx][0].predict_proba(fe[~del_rows])
+                prob[~del_rows, 4] = models[cluster_idx][1].predict_proba(fe[~del_rows])[:, 0]
+                prob[~del_rows, 5] = models[cluster_idx][2].predict_proba(fe[~del_rows])[:, 0]
+                prob[~del_rows, 6] = models[cluster_idx][3].predict_proba(fe[~del_rows])[:, 0]
 
                 prob_reshaped = prob.reshape(np.count_nonzero(ik), n_epochs, 7, order='F')
                 postprob[np.where(ik)[0], :, :] = prob_reshaped
@@ -271,10 +272,17 @@ class SleepSEEG:
         def _define_stage(confidence):
             """Defines sleep stages based on confidence values.
 
+            Confidence values from first to fourth columns give likelihoods that epoch is in stage R, W, N2 and N3
+            respectively.
+
+            Confidence value in fifth, sixth and seventh columns give likelihoods to discriminate stage N1 to R, W and
+            N2 respectively. N1 is not compared to N3 as usually when an epoch has been scored N3 it is very unlikely
+            that the ground truth is N1.
+
+            To match the confidence indices with the stages dictionary defined in the code, we shift stages N2 and N3
+            by a unit, then stage N1 can be assigned using the value 3.
+
             Nans are identified with stage 2.
-            If confidence for stage 1 REM is less than 0.5 reassign to stage 3 N1
-            If confidence for stage 2 Wake is less than 0.5 reassign to stage 3 N1
-            If confidence for stage 4 N2 is less than 0.5 reassign to stage 3 N1
             """
             # Define stage for each epoch
             mm = np.max(confidence[:, :4], axis=1)
@@ -284,14 +292,13 @@ class SleepSEEG:
             sa[np.isnan(mm)] = 2
             mm[np.isnan(mm)] = 0
 
-            # TODO: Why do we do this? How does it impact the interpretation of the sleepstage indices?
-            # Make it clearer
+            # Shift indices to match the dictionary's
             sa[sa > 2] += 1
 
-            # Adjust stage based on confidence thresholds
-            sa[(sa == 1) & (confidence[:, 4] < 0.5)] = 3
-            sa[(sa == 2) & (confidence[:, 5] < 0.5)] = 3
-            sa[(sa == 4) & (confidence[:, 6] < 0.5)] = 3
+            # Adjust stage to discriminate N1 and R, W and N2, respectively.
+            sa[(sa == 1) & (confidence[:, 4] < 0.5)] = 3 # N1 and R
+            sa[(sa == 2) & (confidence[:, 5] < 0.5)] = 3 # N1 and W
+            sa[(sa == 4) & (confidence[:, 6] < 0.5)] = 3 # N1 and N2
 
             return sa, mm
 

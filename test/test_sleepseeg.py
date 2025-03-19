@@ -77,10 +77,25 @@ class TestSleepSEEG(unittest.TestCase):
         cls.matlab_model_import = MatlabModelImport(model_filepath=cls.model_filepath, gc_filepath=cls.gc_filepath)
 
     def test_get_epoch(self):
-        epoch = self.sleepseeg_3min.get_epoch_by_index(epoch_index=0)
+        epoch = self.sleepseeg.get_epoch_by_index(epoch_index=0)
         error = rmse(self.epoch_0_matlab_data, epoch.data[0])
         relative_rmse = error / (np.max(self.epoch_0_matlab_data) - np.min(self.epoch_0_matlab_data))
         self.assertTrue(relative_rmse < 0.01)
+
+        diff = np.subtract(self.epoch_0_matlab_data, epoch.data[0])
+
+        from matplotlib import pyplot as plt
+        fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
+        ax[0].set_title("Epoch 1 LTP1 MATLAB")
+        ax[0].plot(epoch._timestamps, self.epoch_0_matlab_data, linewidth=1)
+        ax[0].set_ylabel('Signal amplitude [uV]')
+        ax[1].set_title("Epoch 1 LTP1 Python")
+        ax[1].plot(epoch._timestamps, epoch.data[0], linewidth=1)
+        ax[1].set_xlabel('Timestamps [s]')
+        ax[1].set_ylabel('Signal amplitude [uV]')
+        plt.show()
+
+        self.assertTrue(np.allclose(self.epoch_0_matlab_data, epoch.data[0], atol=0.5))
 
     def test_compute_features(self):
         # TODO: issue with compute features

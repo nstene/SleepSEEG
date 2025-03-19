@@ -5,6 +5,7 @@ class EEGReaderFactory:
 
     @staticmethod
     def get_reader(file_path: str):
+        # TODO ake it case insensitive
         if file_path.endswith(".edf"):
             return EdfReader(file_path)
         else:

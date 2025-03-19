@@ -372,9 +372,16 @@ class Epoch(EEG):
         self.mean_normalize()
         return
 
-    def drop_channels(self, channels_to_exclude: t.List[Channel]):
-        """Excludes from the data the specified channels."""
-        excluded_channel_names = [chan_to_exclude.name for chan_to_exclude in channels_to_exclude]
+    def drop_channels(self, channels_to_exclude: t.List[Channel]=None) -> None:
+        """Excludes from the data the specified channels.
+
+        :param channels_to_exclude: List of channels to exclude from the analysis. Defaults to None.
+        """
+        if channels_to_exclude is None or len(channels_to_exclude) == 0:
+            return
+
+        excluded_channel_names = [chan_to_exclude.name for chan_to_exclude in channels_to_exclude] \
+            if channels_to_exclude else None
         # Drop channels
         idx_to_drop = [self.chan_idx[name] for name in excluded_channel_names]
         self.set_data(np.delete(self._data, idx_to_drop, axis=0))
