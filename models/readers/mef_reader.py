@@ -9,8 +9,9 @@ from models.layout import Channel, Montage
 
 from datetime import datetime
 
+# TODO: Make sure the the digital to physical conversion is done right.
 
-class MefReader():
+class MefReader(BaseEEGReader):
     """A class for reading, processing, and extracting data from MEF files.
 
     This class provides functionality to read MEF files, extract metadata, and retrieve EEG data.
@@ -28,6 +29,7 @@ class MefReader():
             filepath (str): Path to the EDF file to be read.
         """
 
+        super().__init__(filepath)
         self.montage = None
         password = ''
 

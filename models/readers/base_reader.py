@@ -30,7 +30,7 @@ class BaseEEGReader(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def sampling_frequency(self) -> datetime.datetime:
+    def sampling_frequency(self) -> int:
         """Returns the sampling frequency of the recording. Must be implemented by subclasses."""
         pass
 

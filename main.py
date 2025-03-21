@@ -4,9 +4,9 @@ import typing as t
 from models.matlab_adaptator import MatlabModelImport
 from models.sleep_seeg import SleepSEEG
 
-def run_analysis(patient_dir: str, filename: str, epoch_indices: t.List[int]=None, automatic=False):
+def run_analysis(patient_dir: str, filename: str, password: t.Optional[str] = None, epoch_indices: t.List[int]=None, automatic=False):
     filepath = os.path.join(patient_dir, filename)
-    sleep_eeg_instance = SleepSEEG(filepath=filepath)
+    sleep_eeg_instance = SleepSEEG(filepath=filepath, password=password)
 
     if not automatic:
         sleep_eeg_instance.select_channels()
@@ -40,7 +40,14 @@ def run_analysis(patient_dir: str, filename: str, epoch_indices: t.List[int]=Non
     return sleep_stage, summary
 
 if __name__ == '__main__':
+    # EDF FILE
     # filepath='auditory_stimulation_P18_002.edf'
-    patient_dir = r'C:\Users\natha\Documents\projects\SleepSEEG\eeg_data\ds003708\ds003708\sub-01\ses-ieeg01\ieeg'
-    filename = 'sub-01_ses-ieeg01_task-ccep_run-01_ieeg.mefd'
-    run_analysis(patient_dir=patient_dir, filename=filename)
+
+    # MEF3 FILE
+    # patient_dir = r'C:\Users\natha\Documents\projects\SleepSEEG\eeg_data\ds003708\ds003708\sub-01\ses-ieeg01\ieeg'
+    # filename = 'sub-01_ses-ieeg01_task-ccep_run-01_ieeg.mefd'
+
+    # MED FILE
+    patient_dir = r'C:\Users\natha\Documents\projects\SleepSEEG\eeg_data'
+    filename = 'var_sf.medd'
+    run_analysis(patient_dir=patient_dir, filename=filename, password="L2_password")

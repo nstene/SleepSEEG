@@ -43,14 +43,14 @@ class SleepSEEG:
 
     _EPOCH_EXTRACTION_ROLLING_WINDOW = 30
 
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str, password: t.Optional[str]):
         """Initializes the SleepSEEG object.
 
         :param filepath: Path to the EDF file containing the EEG data.
         """
         self.logger = self._init_logger()
         self._filepath = filepath
-        self._eeg = EEGReaderFactory.get_reader(self._filepath)
+        self._eeg = EEGReaderFactory.get_reader(self._filepath, password=password)
         self.montage_type = 'referential'
         self.epochs = []
         self.sleep_stages = None
