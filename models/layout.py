@@ -156,6 +156,23 @@ class Montage:
         self.montage_type = 'bipolar'
         self.channels = bipolar_channels
 
+    def clean_channel_names(self) -> None:
+        """Standardizes the original channel names.
+        Standardized channel names are assigned to the channels attribute
+
+        Ex:
+        self.original_channel_name = 'EEG LTP1     '
+
+        will result in
+
+        self.chan_family = 'LTP'
+        self.name = 'LTP1'
+        self.family_index = 1
+        """
+
+        for channel in self.channels:
+            channel.clean_name()
+
 
 class EEG:
     """Represents an EEG recording with associated data, montage, and timestamps.
