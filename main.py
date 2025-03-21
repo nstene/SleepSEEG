@@ -4,12 +4,9 @@ import typing as t
 from models.matlab_adaptator import MatlabModelImport
 from models.sleep_seeg import SleepSEEG
 
-def run_analysis(filename, epoch_indices: t.List[int]=None, automatic=False):
-    data_dir = 'eeg_data'
-    filepath = os.path.join(data_dir, filename)
+def run_analysis(patient_dir: str, filename: str, epoch_indices: t.List[int]=None, automatic=False):
+    filepath = os.path.join(patient_dir, filename)
     sleep_eeg_instance = SleepSEEG(filepath=filepath)
-
-    sleep_eeg_instance._edf.clean_channel_names()
 
     if not automatic:
         sleep_eeg_instance.select_channels()
@@ -43,4 +40,7 @@ def run_analysis(filename, epoch_indices: t.List[int]=None, automatic=False):
     return sleep_stage, summary
 
 if __name__ == '__main__':
-    run_analysis(filename='auditory_stimulation_P18_002.edf')
+    # filepath='auditory_stimulation_P18_002.edf'
+    patient_dir = r'C:\Users\natha\Documents\projects\SleepSEEG\eeg_data\ds003708\ds003708\sub-01\ses-ieeg01\ieeg'
+    filename = 'sub-01_ses-ieeg01_task-ccep_run-01_ieeg.mefd'
+    run_analysis(patient_dir=patient_dir, filename=filename)

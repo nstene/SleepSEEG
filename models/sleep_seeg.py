@@ -12,7 +12,7 @@ from models.features import Features
 from models.epoch import Epoch
 from models.layout import Montage, Channel
 from models.readers.reader_factory import EEGReaderFactory
-from models.matlab_adaptator import MatlabModelImport, ClassificationTree
+from models.matlab_adaptator import ClassificationTree
 
 
 STAGENAMES = {1: 'R', 2: 'W', 3: 'N1', 4: 'N2', 5: 'N3'}
@@ -50,7 +50,7 @@ class SleepSEEG:
         """
         self.logger = self._init_logger()
         self._filepath = filepath
-        self._edf = EEGReaderFactory.get_reader(self._filepath)
+        self._eeg = EEGReaderFactory.get_reader(self._filepath)
         self.montage_type = 'referential'
         self.epochs = []
         self.sleep_stages = None
@@ -61,13 +61,13 @@ class SleepSEEG:
         self.sleep_stage = None
         self.excluded_channels = None
 
+        self._montage = self._eeg.get_montage()
+        self._montage.clean_channel_names()
+
     @property
     def channel_names(self) -> t.List[str]:
         """Returns a list of the standardized channel names of the recording."""
-        if not self._edf.channels:
-            self._edf.clean_channel_names()
-
-        channel_names = [chan.name for chan in self._edf.channels]
+        channel_names = [chan.name for chan in self._montage.channels]
         return channel_names
 
     @staticmethod
@@ -92,16 +92,16 @@ class SleepSEEG:
         :returns: The extracted epoch object.
         """
         rolling_window_seconds = 2.5
-        epoch_zero_start = int(self._edf.start_time_sample - rolling_window_seconds / 2 * self._edf.sampling_frequency)
+        epoch_zero_start = int(self._eeg.start_time_sample - rolling_window_seconds / 2 * self._eeg.sampling_frequency)
 
-        epoch_start = int(epoch_zero_start + epoch_index * 30 * self._edf.sampling_frequency)
-        epoch_end = (epoch_zero_start + (epoch_index + 1) * 30 * self._edf.sampling_frequency
-                     + rolling_window_seconds * self._edf.sampling_frequency)
+        epoch_start = int(epoch_zero_start + epoch_index * 30 * self._eeg.sampling_frequency)
+        epoch_end = (epoch_zero_start + (epoch_index + 1) * 30 * self._eeg.sampling_frequency
+                     + rolling_window_seconds * self._eeg.sampling_frequency)
 
         epoch = self.read_epoch(start_sample=epoch_start, end_sample=epoch_end)
-        epoch.start_time = self._edf.start_datetime + timedelta(0, epoch_index * 30)
+        epoch.start_time = self._eeg.start_datetime + timedelta(0, epoch_index * 30)
         epoch.start_sample = epoch_start
-        epoch.matlab_start_sample = int(self._edf.start_time_sample + epoch_index * 30 * self._edf.sampling_frequency)
+        epoch.matlab_start_sample = int(self._eeg.start_time_sample + epoch_index * 30 * self._eeg.sampling_frequency)
 
         epoch.drop_channels(self.excluded_channels)
 
@@ -115,7 +115,7 @@ class SleepSEEG:
         :param keep_epoch_data: Whether to retain the raw data in the epoch objects. Defaults to False.
         :return: Computed features for all epochs in the form (Nfeat, Nchans, Nepochs).
         """
-        epochs_to_extract = epoch_indices if epoch_indices else range(self._edf.n_epochs)
+        epochs_to_extract = epoch_indices if epoch_indices else range(self._eeg.n_epochs)
         features_list = []
         epochs_list = []
         for idx in tqdm(epochs_to_extract, "Extracting epochs"):
@@ -166,7 +166,7 @@ class SleepSEEG:
         :return: The extracted epoch object.
         """
         if not end_sample:
-            end_sample = int(start_sample + epoch_duration * self._edf.sampling_frequency)
+            end_sample = int(start_sample + epoch_duration * self._eeg.sampling_frequency)
 
         if (end_sample % 1 != 0) or (start_sample % 1 != 0):
             raise ValueError(f"Start and end samples must be integers. "
@@ -175,11 +175,11 @@ class SleepSEEG:
         start_sample = int(start_sample)
         end_sample = int(end_sample)
 
-        data, timestamps, channels = self._edf.load_data(start_sample=start_sample, end_sample=end_sample)
+        data, timestamps, channels = self._eeg.load_data(start_sample=start_sample, end_sample=end_sample)
         #data, channels = self._edf.extract_data_pyedflib(start_sample=start_sample, end_sample=end_sample, digital=True)
         montage = Montage(channels=channels, montage_type='referential')
 
-        return Epoch(data=data, fs=self._edf.sampling_frequency, timestamps=timestamps, montage=montage)
+        return Epoch(data=data, fs=self._eeg.sampling_frequency, timestamps=timestamps, montage=montage)
         # return Epoch(data=data, fs=self._edf.sampling_frequency, timestamps=None, montage=montage)
 
     @staticmethod

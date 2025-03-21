@@ -7,10 +7,10 @@ import numpy as np
 import statistics
 
 from ..layout import Channel, Montage
-from models.readers.base_reader import BaseEEGLoader
+from models.readers.base_reader import BaseEEGReader
 
 
-class EdfReader(BaseEEGLoader):
+class EdfReader(BaseEEGReader):
     """A class for reading, processing, and extracting data from EDF files.
 
     This class provides functionality to read EDF files, extract metadata, and retrieve EEG data
@@ -61,7 +61,6 @@ class EdfReader(BaseEEGLoader):
     _STELLATE_MIN_SECONDS_1 = 27.75
     _STELLATE_MIN_SECONDS_2 = 57.75
 
-    _MATLAB_DATENUM_OFFSET = 719529
     _SECONDS_IN_DAY = 86400
 
     EPOCH_LENGTH = 30  # In seconds
@@ -74,10 +73,10 @@ class EdfReader(BaseEEGLoader):
         """
         super().__init__(filepath=filepath)
         self._raw_data = mne.io.read_raw_edf(input_fname=filepath, preload=False)
-        self._channel_names = []
-        self.channels = []
+        self.channels = [Channel(original_name=chan) for chan in self.original_channel_names]
 
         self._metadata = self._extract_metadata()
+        self.montage = None
 
         assert int(self.sampling_frequency) == int(self.samples_per_record[0] / self.record_duration)
         assert int(self.n_samples) == int(self.n_records * self.samples_per_record[0])
@@ -225,32 +224,10 @@ class EdfReader(BaseEEGLoader):
 
         return np.floor(n_epochs).astype(int)
 
-    def clean_channel_names(self) -> None:
-        """Standardizes the original channel names.
-        Standardized channel names are assigned to the channels attribute
-
-        Ex:
-        self.original_channel_name = 'EEG LTP1     '
-
-        will result in
-
-        self.chan_family = 'LTP'
-        self.name = 'LTP1'
-        self.family_index = 1
-        """
-        original_chans = self._raw_data.info['ch_names']
-
-        clean_channels = []
-        for ch in original_chans:
-            channel = Channel(original_name=ch)
-            channel.clean_name()
-            clean_channels.append(channel)
-
-        self.channels = clean_channels
-
     def get_montage(self) -> Montage:
         """Returns a referential montage instance populated with the channels in the recoring."""
-        return Montage(channels=self.channels, montage_type='referential')
+        self.montage = Montage(channels=self.channels, montage_type='referential')
+        return self.montage
 
     def load_data(self, start_sample: int, end_sample: int, chan_picks: list = None) \
             -> t.Tuple[np.ndarray[float], np.ndarray[float], t.List[Channel]]:
@@ -271,8 +248,6 @@ class EdfReader(BaseEEGLoader):
         # TODO: gotta assert that the number of channels is same as the length of samples per record.
         # TODO: not the case as yet
         # Make sure self.channels is not empty
-        if not self.channels:
-            self.clean_channel_names()
 
         if chan_picks is None:
             chan_picks = [ch.original_name for i, ch in enumerate(self.channels) if i not in self.discarded_channels]
