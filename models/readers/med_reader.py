@@ -3,12 +3,9 @@ from datetime import datetime
 import typing as t
 import re
 
-import mne
-import pyedflib
 import numpy as np
 import statistics
 from dhn_med_py import MedSession
-from dhn_med_py.med_session import MedDataMatrix
 
 from ..layout import Channel, Montage
 from models.readers.base_reader import BaseEEGReader
@@ -76,6 +73,7 @@ class MedReader(BaseEEGReader):
 
     def load_data(self, start_sample: int, end_sample: int, chan_picks: list = None) \
             -> t.Tuple[np.ndarray, None, t.List[Channel]]:
+        # TODO: this is not working
 
         if chan_picks is None:
             chan_picks = [ch.original_name for i, ch in enumerate(self.channels) if i not in self.discarded_channels]
@@ -91,26 +89,34 @@ class MedReader(BaseEEGReader):
 
     @property
     def sampling_frequency(self) -> int:
+        """Returns sampling frequency.
+        It is assumed all channels have the same sampling frequency, so we take the reference channel's sampling frequency.
+        """
         return self._info['channels'][self._reference_channel_idx]['metadata']['sampling_frequency']
 
     @property
     def channel_names(self) -> t.List[str]:
+        """Returns a list of clean channel names."""
         return [chan.name for chan in self.channels]
 
     @property
     def start_datetime(self) -> datetime:
+        """Returns the start date and time of the recording."""
         return self._metadata['start_time']
 
     @property
     def end_datetime(self) -> datetime:
+        """Returns the end date and time of the recording."""
         return self._metadata['end_time']
 
     @property
     def start_time_sample(self) -> int:
+        """Returns the sample at which to begin reading the data."""
         return self._metadata['start_time_sample']
 
     @property
     def original_channel_names(self):
+        """Returns the channel names as they were originally extracted from the recording."""
         return [chan['metadata']['channel_name'] for chan in self._info['channels']]
 
     def get_montage(self) -> Montage:
@@ -120,6 +126,9 @@ class MedReader(BaseEEGReader):
 
     @property
     def n_samples(self):
+        """Returns the total number of samples of the recording.
+        It is assumed all channels have the same sampling frequency, so we take the reference channel's fs.
+        """
         diff = self.end_datetime - self.start_datetime
         return diff.seconds * self.sampling_frequency
 

@@ -1,15 +1,16 @@
-from models.readers.base_reader import BaseEEGReader
-from pymef.mef_session import MefSession
-from pymef.mef_file import pymef3_file
-# from mef_tools.io import MefReader
+import warnings
 import typing as t
-import numpy as np
-import statistics
-from models.layout import Channel, Montage
 
 from datetime import datetime
+import numpy as np
+import statistics
 
-# TODO: Make sure the the digital to physical conversion is done right.
+from models.readers.base_reader import BaseEEGReader
+from pymef.mef_session import MefSession
+from models.layout import Channel, Montage
+
+
+# TODO: Make sure the digital to physical conversion is done right.
 
 class MefReader(BaseEEGReader):
     """A class for reading, processing, and extracting data from MEF files.
@@ -39,6 +40,12 @@ class MefReader(BaseEEGReader):
         self._metadata = self._extract_metadata()
 
         self.channels = [Channel(original_name=chan) for chan in self.original_channel_names]
+
+        # Make some checks
+        sampling_frequencies = [chan['fsamp'] for chan in self._info]
+        if not np.all(sampling_frequencies == sampling_frequencies[0]):
+            warnings.warn("Channels with different sampling frequencies are not yet supported.\n "
+                          "The first channel's sampling frequency will be used throughout the analysis, which give invalid results.")
 
     def get_montage(self) -> Montage:
         """Returns a referential montage instance populated with the channels in the recoring."""
@@ -76,6 +83,7 @@ class MefReader(BaseEEGReader):
 
     @property
     def channel_names(self) -> t.List[str]:
+        """Returns a list of clean channel names."""
         return [chan.name for chan in self.channels]
 
     @property
@@ -90,10 +98,16 @@ class MefReader(BaseEEGReader):
 
     @property
     def n_samples(self):
+        """Returns the total number of samples of the recording.
+        It is assumed all channels have the same sampling frequency, so we take the first channel's number of samples.
+        """
         return [chan['nsamp'] for chan in self._info][0][0]
 
     @property
     def sampling_frequency(self):
+        """Returns sampling frequency.
+        It is assumed all channels have the same sampling frequency, so we take the first channel's sampling frequency.
+        """
         return [chan['fsamp'] for chan in self._info][0][0]
 
     @property
